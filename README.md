@@ -1,6 +1,6 @@
 # AetherJokers
 A mod that adds a few misc jokers with unique mechanics.
-None of the implemented Jokers and Enhancements currently have art, but they do have sounds and effects.
+\nNone of the implemented Jokers and Enhancements currently have art, but they do have sounds and effects.
 If anybody wants to help with art, just contact me, I'm "BustyCatbot" on Discord.
 
 ## Current Jokers
