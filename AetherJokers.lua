@@ -464,15 +464,27 @@ SMODS.Joker {
 
                 return {
                     message = localize('k_debuffed'),
+                    card = context.other_card
                     colour = G.C.RED
                 }
 
             else
 
-                return {
-                    chips = context.other_card.base.nominal * 2,
-                    card = context.other_card
-                }
+                if SMODS.has_enhancement(v, 'm_stone') then
+
+                    return {
+                        chips = context.other_card.ability.bonus * 2,
+                        card = context.other_card
+                    }
+
+                else
+
+                    return {
+                        chips = context.other_card.base.nominal * 2,
+                        card = context.other_card
+                    }
+
+                end
                 
             end
 
@@ -492,7 +504,15 @@ SMODS.Joker {
 
                     if not v.debuff and not v.highlighted then
 
-                        card.ability.extra.held_chips = card.ability.extra.held_chips + v.base.nominal * 2
+                        if SMODS.has_enhancement(v, 'm_stone') then
+
+                            card.ability.extra.held_chips = card.ability.extra.held_chips + v.ability.bonus * 2
+
+                        else
+
+                            card.ability.extra.held_chips = card.ability.extra.held_chips + v.base.nominal * 2
+
+                        end
 
                     end
 
@@ -663,10 +683,9 @@ SMODS.Joker {
 
                     if v.config.card.value == draw_rank then
 
-                        hailcard = copy_card(v)
-
                         G.E_MANAGER:add_event(Event({
                             func = function()
+                                hailcard = copy_card(v)
                                 hailcard:add_to_deck()
                                 table.insert(G.playing_cards, hailcard)
                                 G.deck.config.card_limit = G.deck.config.card_limit + 1
@@ -724,7 +743,7 @@ SMODS.Joker {
     perishable_compat = true,
 	calculate = function(self, card, context)
 
-        if (context.pre_discard and G.GAME.current_round.discards_left == 1) or (context.final_scoring_step and G.GAME.current_round.hands_left == 1 and pseudorandom('hailmaryhand') < G.GAME.probabilities.normal / card.ability.extra.hand_odds) and not context.blueprint then
+        if (context.pre_discard and G.GAME.current_round.discards_left == 1) or (context.final_scoring_step and G.GAME.current_round.hands_left == 1 and pseudorandom('eleventhhand') < G.GAME.probabilities.normal / card.ability.extra.hand_odds) and not context.blueprint then
 
             if #G.hand.cards >= 1 then
 
@@ -766,10 +785,9 @@ SMODS.Joker {
 
                 if v.config.card.suit == draw_suit then
 
-                    eleventhcard = copy_card(v)
-
                     G.E_MANAGER:add_event(Event({
                         func = function()
+                            eleventhcard = copy_card(v)
                             eleventhcard:add_to_deck()
                             table.insert(G.playing_cards, eleventhcard)
                             G.deck.config.card_limit = G.deck.config.card_limit + 1
@@ -1271,10 +1289,12 @@ SMODS.Joker {
 	loc_txt = {
 		name = 'Joker of Holding',
 		text = {
-			'{C:consumed}Consumes{} all played cards of first played hand',
+			'{C:consumed}Consumes{} all played cards of first',
+            'played hand if hand contains {C:attention}5{} cards',
             'Draws all {C:consumed}Consumed{} cards to hand when sold',
-            '{C:consumed}Consumed{} cards permanently gain base chips of all',
-            'scored cards as extra chips for each played hand',
+            '{C:consumed}Consumed{} cards permanently gain',
+            'base chips of all scored cards as',
+            'extra chips for each played hand',
             '{C:inactive}(Currently {C:chips}+#1#{C:inactive})',
             '{C:inactive}(Holding {C:consumed}#2#{C:inactive} Cards)'
 		}
@@ -1290,7 +1310,7 @@ SMODS.Joker {
     perishable_compat = true,
 	calculate = function(self, card, context)
 
-		if context.destroy_card and context.cardarea ~= G.hand and G.GAME.current_round.hands_played == 0 and not context.blueprint then
+		if context.destroy_card and context.cardarea ~= G.hand and G.GAME.current_round.hands_played == 0 and not context.blueprint and #G.play.cards == 5 then
 
             if card.ability.extra.joker_triggers == 0 then
 
@@ -1342,22 +1362,26 @@ SMODS.Joker {
 
             card.ability.extra.joker_triggers = 0
 
-            G.E_MANAGER:add_event(Event({
-                func = function()
-                    for k,v in pairs(card.ability.extra.consumed_cards) do
+            if #card.ability.extra.consumed_cards > 0 then
 
-                        v.ability.perma_bonus = v.ability.perma_bonus + card.ability.extra.bonus_chips
+                G.E_MANAGER:add_event(Event({
+                    func = function()
+                        for k,v in pairs(card.ability.extra.consumed_cards) do
 
-                    end
-                    return true
-                end,
-                blocking = true
-            }))
+                            v.ability.perma_bonus = v.ability.perma_bonus + card.ability.extra.bonus_chips
 
-            return {
-                message = '+'..card.ability.extra.bonus_chips,
-                colour = G.C.CHIPS
-            }
+                        end
+                        return true
+                    end,
+                    blocking = true
+                }))
+
+                return {
+                    message = '+'..card.ability.extra.bonus_chips,
+                    colour = G.C.CHIPS
+                }
+
+            end
 
         end
 
