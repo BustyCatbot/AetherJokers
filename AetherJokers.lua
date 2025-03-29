@@ -470,7 +470,7 @@ SMODS.Joker {
 
             else
 
-                if SMODS.has_enhancement(v, 'm_stone') then
+                if SMODS.has_enhancement(context.other_card, 'm_stone') then
 
                     return {
                         chips = context.other_card.ability.bonus * 2,
