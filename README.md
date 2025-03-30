@@ -4,8 +4,6 @@ A mod that adds a few misc jokers with unique mechanics. None of the implemented
 ### Common Jokers
 - Drug Test : Gives $1 for every 3 scored Non-Enhanced cards
 
-- Backseat Joker : Adds double base chips of all cards held in hand
-
 - Palette Joker : Gains X0.1 Mult for every scored suit sequence
 
 - Hail Mary : Draws one of the most abundant card ranks in hand from deck on last discard. Has a 1 in 2 chance to trigger on last hand
@@ -13,7 +11,7 @@ A mod that adds a few misc jokers with unique mechanics. None of the implemented
 - Eleventh Hour : Draws one of the most abundant card suits in hand from deck on last discard. Has a 1 in 2 chance to trigger on last hand
 
 ### Uncommon Jokers
-- Handy Joker : +1 hand size per hand on first draw. -1 hand size on each hand played
+- Backseat Joker : Adds double base chips of all cards held in hand
 
 - Divisible Joker : +X0.25 Mult if current chips are divisible by 2, 3, 5, and/or 7 (Stacks)
 
@@ -26,6 +24,8 @@ A mod that adds a few misc jokers with unique mechanics. None of the implemented
 - Overkill Joker : Gives $1 at end of round for every 0.5x total score over score requirement in a single hand. (Max of $20)
 
 ### Rare Jokers
+- Handy Joker : +1 hand size per hand on first draw. -1 hand size on each hand played
+
 - Joker of Holding : Consumes all played cards of first played hand if hand contains 5 cards. Draws all Consumed cards to hand when sold. Consumed cards permanently gain base chips of all scored cards as extra chips for each played hand
 
 - Flushify Joker : Turns any played Straight, Full House, or Five of a Kind into its Flush Variant and converts all scored cards into Wild Cards
