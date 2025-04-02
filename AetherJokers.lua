@@ -7,16 +7,19 @@
 --- BADGE_COLOR: a040ff
 --- PREFIX: aether
 
---[[SMODS.Atlas {
-	-- Key for code to find it with
-	key = "AetherJokers",
-	-- The name of the file, for the code to pull the atlas from
-	path = "AetherJokers.png",
-	-- Width of each sprite in 1x size
+SMODS.Atlas {
+	key = 'aetherjokers',
+	path = 'AetherJokers.png',
 	px = 71,
-	-- Height of each sprite in 1x size
 	py = 95
-}]]
+}
+
+SMODS.Atlas {
+	key = 'aetherenhancers',
+	path = 'AetherEnhancers.png',
+	px = 71,
+	py = 95
+}
 
 local base_loc_colour = loc_colour
 function loc_colour(_c, _default)
@@ -91,6 +94,16 @@ local base_calculate = Card.calculate_joker
 function Card:calculate_joker(context)
     local ret = base_calculate(self, context)
 
+    if context.other_card then
+
+        if SMODS.has_enhancement(context.other_card, 'm_aether_counterfeit') and context.other_card.ability.extra.uses_left <= 0 and context.other_card ~= self and not context.check_enhancement then
+
+            return nil
+
+        end
+
+    end
+
     if context.joker_main then
 
         if self.force_trigger then
@@ -163,9 +176,14 @@ function Card:use_consumeable(area, copier)
         if SMODS.has_enhancement(v, 'm_aether_sleeved') then
 
             card_eval_status_text(v, 'extra', nil, nil, nil, {message = 'Sleeved!', sound = 'highlight1', colour = G.C.SLEEVED})
-            v:start_dissolve({G.C.BLACK, G.C.SLEEVED, G.C.SLEEVED}, false, 5)
-            delay(1)
-            v:remove()
+            G.E_MANAGER:add_event(Event({
+                func = function()
+                    v:start_dissolve({G.C.BLACK, G.C.SLEEVED, G.C.SLEEVED}, false, 5)
+                    delay(1)
+                    v:remove()
+                    return true
+                end
+            }))
 
         end
 
@@ -173,6 +191,113 @@ function Card:use_consumeable(area, copier)
 
     return ret
 end
+
+local base_can_discard = G.FUNCS.can_discard
+G.FUNCS.can_discard = function(e)
+    local ret = base_can_discard(e)
+
+        if G.GAME.inverted then
+            e.config.colour = G.C.BLUE
+            e.config.button = 'inverted_discard_cards_from_highlighted'
+            ease_background_colour{new_colour = G.C.BLUE}
+        end
+
+    return ret
+end
+
+G.FUNCS.inverted_discard_cards_from_highlighted = function(e, hook)
+    stop_use()
+    G.CONTROLLER.interrupt.focus = true
+    G.CONTROLLER:save_cardarea_focus('hand')
+
+    for k, v in ipairs(G.playing_cards) do
+        v.ability.forced_selection = nil
+    end
+
+    if G.CONTROLLER.focused.target and G.CONTROLLER.focused.target.area == G.hand then G.card_area_focus_reset = {area = G.hand, rank = G.CONTROLLER.focused.target.rank} end
+    local highlighted_count = math.min(#G.hand.highlighted, G.discard.config.card_limit - #G.play.cards)
+    if highlighted_count > 0 then 
+        update_hand_text({immediate = true, nopulse = true, delay = 0}, {mult = 0, chips = 0, level = '', handname = ''})
+        table.sort(G.hand.highlighted, function(a,b) return a.T.x < b.T.x end)
+        inc_career_stat('c_cards_discarded', highlighted_count)
+        for j = 1, #G.jokers.cards do
+            G.jokers.cards[j]:calculate_joker({pre_discard = true, full_hand = G.hand.highlighted, hook = hook})
+        end
+        local cards = {}
+        local destroyed_cards = {}
+        for i=1, highlighted_count do
+            G.hand.highlighted[i]:calculate_seal({discard = true})
+            local removed = false
+            for j = 1, #G.jokers.cards do
+                local eval = nil
+                eval = G.jokers.cards[j]:calculate_joker({discard = true, other_card =  G.hand.highlighted[i], full_hand = G.hand.highlighted})
+                if eval then
+                    if eval.remove then removed = true end
+                    card_eval_status_text(G.jokers.cards[j], 'jokers', nil, 1, nil, eval)
+                end
+            end
+            table.insert(cards, G.hand.highlighted[i])
+            if removed then
+                destroyed_cards[#destroyed_cards + 1] = G.hand.highlighted[i]
+                if G.hand.highlighted[i].ability.name == 'Glass Card' then 
+                    G.hand.highlighted[i]:shatter()
+                else
+                    G.hand.highlighted[i]:start_dissolve()
+                end
+            else 
+                G.hand.highlighted[i].ability.discarded = false
+                draw_card(G.hand, G.deck, i*100/highlighted_count, 'down', false, G.hand.highlighted[i])
+            end
+        end
+
+        if destroyed_cards[1] then 
+            for j=1, #G.jokers.cards do
+                eval_card(G.jokers.cards[j], {cardarea = G.jokers, remove_playing_cards = true, removed = destroyed_cards})
+            end
+        end
+
+        G.GAME.round_scores.cards_discarded.amt = G.GAME.round_scores.cards_discarded.amt - #cards
+        check_for_unlock({type = 'discard_custom', cards = cards})
+        if not hook then
+            if G.GAME.modifiers.discard_cost then
+                ease_dollars(-G.GAME.modifiers.discard_cost)
+            end
+            if G.GAME.current_round.discards_left < G.GAME.round_resets.discards then
+                ease_discard(1)
+                play_sound('aether_invertedchips1')
+            end
+            G.GAME.current_round.discards_used = G.GAME.current_round.discards_used - 1
+            G.STATE = G.STATES.DRAW_TO_HAND
+            G.E_MANAGER:add_event(Event({
+                trigger = 'immediate',
+                func = function()
+                    G.STATE_COMPLETE = false
+                    return true
+                end
+            }))
+        end
+    end
+end
+
+SMODS.Sound({
+    key = 'joker1',
+    path = 'joker1.ogg',
+})
+
+SMODS.Sound({
+    key = 'joker2',
+    path = 'joker2.ogg',
+})
+
+SMODS.Sound({
+    key = 'joker3',
+    path = 'joker3.ogg',
+})
+
+SMODS.Sound({
+    key = 'jokerspecial',
+    path = 'jokerspecial.ogg',
+})
 
 SMODS.Sound({
     key = 'tennisstart',
@@ -364,6 +489,42 @@ SMODS.Sound({
     path = 'fleshperish2.ogg',
 })
 
+SMODS.Sound({
+    key = 'invertedcard1',
+    path = 'invertedcard1.ogg',
+})
+
+SMODS.Sound({
+    key = 'invertedchips1',
+    path = 'invertedchips1.ogg',
+})
+
+SMODS.Sound({
+    vol = 0.6,
+    pitch = 0.7,
+    key = 'invertedmusic1',
+    path = 'invertedmusic1.ogg',
+    sync = true,
+    select_music_track = function()
+        if G.GAME.blind and not G.GAME.blind.config.blind.boss then
+            return G.GAME.inverted and 10 or false
+        end
+    end
+})
+
+SMODS.Sound({
+    vol = 0.6,
+    pitch = 0.7,
+    key = 'invertedmusic5',
+    path = 'invertedmusic5.ogg',
+    sync = true,
+    select_music_track = function()
+        if G.GAME.blind and G.GAME.blind.config.blind.boss then
+            return G.GAME.inverted and 10 or false
+        end
+    end
+})
+
 SMODS.Joker {
 	key = 'drugtest',
 	loc_txt = {
@@ -379,7 +540,8 @@ SMODS.Joker {
 		return { vars = { card.ability.extra.money_mod, card.ability.extra.cards, card.ability.extra.scored_cards } }
 	end,
 	rarity = 1,
-	pos = { x = 9, y = 9 },
+    atlas = 'aetherjokers',
+	pos = { x = 1, y = 1 },
 	cost = 5,
     blueprint_compat = true,
     eternal_compat = true,
@@ -464,7 +626,8 @@ SMODS.Joker {
         } }
 	end,
 	rarity = 1,
-	pos = { x = 9, y = 9 },
+	atlas = 'aetherjokers',
+	pos = { x = 2, y = 1 },
 	cost = 4,
     blueprint_compat = true,
     eternal_compat = true,
@@ -535,7 +698,8 @@ SMODS.Joker {
 		return { vars = {(G.GAME.probabilities.normal or 1), card.ability.extra.hand_odds} }
 	end,
 	rarity = 1,
-	pos = { x = 9, y = 9 },
+	atlas = 'aetherjokers',
+	pos = { x = 0, y = 0 },
 	cost = 5,
     eternal_compat = true,
     perishable_compat = true,
@@ -592,13 +756,9 @@ SMODS.Joker {
 
                         G.E_MANAGER:add_event(Event({
                             func = function()
-                                hailcard = copy_card(v)
-                                hailcard:add_to_deck()
-                                table.insert(G.playing_cards, hailcard)
-                                G.deck.config.card_limit = G.deck.config.card_limit + 1
-                                G.hand:emplace(hailcard)
-                                G.hand:sort()
-                                v:remove()
+                                moved_card = v
+                                G.deck:remove_card(moved_card)
+                                G.hand:emplace(moved_card)
                                 return true
                             end,
                             blocking = false
@@ -644,7 +804,8 @@ SMODS.Joker {
 		return { vars = {(G.GAME.probabilities.normal or 1), card.ability.extra.hand_odds} }
 	end,
 	rarity = 1,
-	pos = { x = 9, y = 9 },
+	atlas = 'aetherjokers',
+	pos = { x = 0, y = 0 },
 	cost = 5,
     eternal_compat = true,
     perishable_compat = true,
@@ -694,13 +855,9 @@ SMODS.Joker {
 
                     G.E_MANAGER:add_event(Event({
                         func = function()
-                            eleventhcard = copy_card(v)
-                            eleventhcard:add_to_deck()
-                            table.insert(G.playing_cards, eleventhcard)
-                            G.deck.config.card_limit = G.deck.config.card_limit + 1
-                            G.hand:emplace(eleventhcard)
-                            G.hand:sort()
-                            v:remove()
+                            moved_card = v
+                            G.deck:remove_card(moved_card)
+                            G.hand:emplace(moved_card)
                             return true
                         end,
                         blocking = false
@@ -732,8 +889,8 @@ SMODS.Joker {
 	loc_txt = {
 		name = 'Backseat Joker',
 		text = {
-			'Adds {C:attention}double{} base chips of',
-            'all cards held in hand',
+			'Adds {C:attention}double{} base chips and {C:attention}half',
+            'bonus chips of all cards held in hand',
             '{C:inactive}(Currently {C:chips}+#1#{C:inactive} Chips)'
 		}
 	},
@@ -742,7 +899,8 @@ SMODS.Joker {
 		return { vars = { card.ability.extra.held_chips } }
 	end,
 	rarity = 2,
-	pos = { x = 9, y = 9 },
+	atlas = 'aetherjokers',
+	pos = { x = 4, y = 0 },
 	cost = 5,
     blueprint_compat = true,
     eternal_compat = true,
@@ -764,14 +922,14 @@ SMODS.Joker {
                 if SMODS.has_enhancement(context.other_card, 'm_stone') then
 
                     return {
-                        chips = context.other_card.ability.bonus * 2,
+                        chips = (context.other_card.ability.bonus * 2) + math.ceil(context.other_card.ability.perma_bonus / 2),
                         card = context.other_card
                     }
 
                 elseif not SMODS.has_enhancement(context.other_card, 'm_aether_fleshstone') then
 
                     return {
-                        chips = context.other_card.base.nominal * 2,
+                        chips = (context.other_card.base.nominal * 2) + math.ceil(context.other_card.ability.perma_bonus / 2),
                         card = context.other_card
                     }
 
@@ -797,11 +955,11 @@ SMODS.Joker {
 
                         if SMODS.has_enhancement(v, 'm_stone') then
 
-                            card.ability.extra.held_chips = card.ability.extra.held_chips + v.ability.bonus * 2
+                            card.ability.extra.held_chips = card.ability.extra.held_chips + (v.ability.bonus * 2) + math.ceil(v.ability.perma_bonus / 2)
 
                         elseif not SMODS.has_enhancement(v, 'm_aether_fleshstone') then
 
-                            card.ability.extra.held_chips = card.ability.extra.held_chips + v.base.nominal * 2
+                            card.ability.extra.held_chips = card.ability.extra.held_chips + (v.base.nominal * 2) + math.ceil(v.ability.perma_bonus / 2)
 
                         end
 
@@ -836,7 +994,8 @@ SMODS.Joker {
 		return { vars = {card.ability.extra.mult} }
 	end,
 	rarity = 2,
-	pos = { x = 9, y = 9 },
+	atlas = 'aetherjokers',
+	pos = { x = 0, y = 1 },
 	cost = 4,
     blueprint_compat = true,
     eternal_compat = true,
@@ -895,7 +1054,8 @@ SMODS.Joker {
 		return { vars = {} }
 	end,
 	rarity = 2,
-	pos = { x = 9, y = 9 },
+	atlas = 'aetherjokers',
+	pos = { x = 0, y = 0 },
 	cost = 5,
     eternal_compat = true,
     perishable_compat = true,
@@ -983,7 +1143,8 @@ SMODS.Joker {
 		return { vars = { card.ability.extra.mult_mod, card.ability.extra.mult, card.ability.extra.streak, card.ability.extra.money } }
 	end,
 	rarity = 2,
-	pos = { x = 9, y = 9 },
+	atlas = 'aetherjokers',
+	pos = { x = 0, y = 1 },
 	cost = 3,
     blueprint_compat = true,
     eternal_compat = true,
@@ -1127,7 +1288,8 @@ SMODS.Joker {
 		return { vars = {(G.GAME.probabilities.normal or 1), card.ability.extra.card_odds} }
 	end,
 	rarity = 2,
-	pos = { x = 9, y = 9 },
+	atlas = 'aetherjokers',
+	pos = { x = 1, y = 0 },
 	cost = 4,
     blueprint_compat = true,
     eternal_compat = true,
@@ -1151,9 +1313,11 @@ SMODS.Joker {
 
                 delay(0.2)
 
-            end            
+            end
 
             if #card.ability.extra.drawn_aces <= 0 then
+
+                card.ability.extra.drawn_aces = {}
 
                 return {
                     message = 'No Dice!',
@@ -1187,7 +1351,8 @@ SMODS.Joker {
 		return { vars = {card.ability.extra.money_mod, card.ability.extra.multiple, card.ability.extra.max} }
 	end,
 	rarity = 2,
-	pos = { x = 9, y = 9 },
+	atlas = 'aetherjokers',
+	pos = { x = 1, y = 1 },
 	cost = 4,
     eternal_compat = true,
     perishable_compat = true,
@@ -1225,6 +1390,57 @@ SMODS.Joker {
 }
 
 SMODS.Joker {
+	key = 'counterfeitjoker',
+	loc_txt = {
+		name = 'Counterfeit Joker',
+		text = {
+			'Adds {C:attention}Counterfeit{} copies of all highlighted',
+            'cards to your deck when sold'
+		}
+	},
+	config = {unlocked = true, discovered = true, extra = {} },
+	loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue + 1] = G.P_CENTERS.m_aether_counterfeit
+		return { vars = {} }
+	end,
+	rarity = 2,
+	atlas = 'aetherjokers',
+	pos = { x = 3, y = 0 },
+	cost = 4,
+    eternal_compat = true,
+    perishable_compat = true,
+	calculate = function(self, card, context)
+
+        if context.selling_self and #G.hand.highlighted > 0 then
+
+            for k,v in pairs(G.hand.highlighted) do
+
+                G.E_MANAGER:add_event(Event({
+                    func = function()
+                        copiedcard = copy_card(v)
+                        copiedcard:add_to_deck()
+                        table.insert(G.playing_cards, copiedcard)
+                        G.deck.config.card_limit = G.deck.config.card_limit + 1
+                        G.deck:emplace(copiedcard)
+                        copiedcard:set_ability(G.P_CENTERS.m_aether_counterfeit, nil, true)
+                        card:juice_up(0.3,0.5)
+                        play_sound('card1')
+                        return true
+                    end,
+                    blocking = true
+                }))
+
+                delay(0.2)
+
+            end
+
+        end
+
+    end,
+
+}
+
+SMODS.Joker {
 	key = 'handyjoker',
 	loc_txt = {
 		name = 'Handy Joker',
@@ -1240,48 +1456,71 @@ SMODS.Joker {
 		return {}
 	end,
 	rarity = 3,
-	pos = { x = 9, y = 9 },
+	atlas = 'aetherjokers',
+	pos = { x = 0, y = 0 },
 	cost = 6,
     blueprint_compat = false,
     eternal_compat = true,
     perishable_compat = true,
 	calculate = function(self, card, context)
 
-        if context.first_hand_drawn and not context.blueprint then
+        if not context.blueprint then
 
-            card.ability.extra.added_hand_size = G.GAME.current_round.hands_left
+            if context.first_hand_drawn then
 
-            if card.ability.extra.added_hand_size > 0 then
+                card.ability.extra.added_hand_size = G.GAME.current_round.hands_left
 
-                G.hand:change_size(card.ability.extra.added_hand_size)
+                if card.ability.extra.added_hand_size > 0 and not card.debuff then
+                    G.hand:change_size(card.ability.extra.added_hand_size)
+                end
+
+            end
+
+            if context.before then
+
+                if card.ability.extra.added_hand_size > 0 then
+                    card.ability.extra.added_hand_size = card.ability.extra.added_hand_size -1
+                    if not card.debuff then
+                        G.hand:change_size(-1)
+                    end
+                end
+
+            end
+
+            if context.end_of_round and context.cardarea == G.jokers then
+
+                card.ability.extra.added_hand_size = 0
+
+                if not card.debuff then
+                    G.hand:change_size(-G.GAME.current_round.hands_left)
+                end
 
             end
 
         end
 
-        if context.before and not context.blueprint then
+    end,
 
-            card.ability.extra.added_hand_size = card.ability.extra.added_hand_size -1
+    add_to_deck = function(self, card, from_debuff)
 
-            G.hand:change_size(-1)
-
-        end
-
-        if context.end_of_round and context.cardarea == G.jokers and not context.blueprint then
-
-            card.ability.extra.added_hand_size = 0
-
-            G.hand:change_size(-G.GAME.current_round.hands_left)
-
+        if card.ability.extra.added_hand_size > 0 then
+            G.hand:change_size(card.ability.extra.added_hand_size)
         end
 
     end,
 
     remove_from_deck = function(self, card, from_debuff)
 
-        G.hand:change_size(-card.ability.extra.added_hand_size)
+        if card.ability.extra.added_hand_size > 0 then
+            G.hand:change_size(-card.ability.extra.added_hand_size)
+            for i = 1, card.ability.extra.added_hand_size do
+                moved_card = G.hand.cards[#G.hand.cards]
+                G.hand:remove_card(moved_card)
+                G.deck:emplace(moved_card)
+            end
+        end
 
-    end
+    end,
 
 }
 
@@ -1301,12 +1540,13 @@ SMODS.Joker {
             '{C:inactive}(Holding {C:consumed}#2#{C:inactive} Cards)'
 		}
 	},
-	config = {unlocked = true, discovered = true, extra = { consumed_cards = {}, joker_triggers = 0, bonus_chips = 0 } },
+	config = {unlocked = true, discovered = true, extra = { consumed_cards = {}, joker_triggers = 0, bonus_chips = 0, bonus_chips_visible = 0 } },
 	loc_vars = function(self, info_queue, card)
-		return { vars = { card.ability.extra.bonus_chips, #card.ability.extra.consumed_cards } }
+		return { vars = { card.ability.extra.bonus_chips_visible, #card.ability.extra.consumed_cards } }
 	end,
 	rarity = 3,
-	pos = { x = 9, y = 9 },
+	atlas = 'aetherjokers',
+	pos = { x = 4, y = 1 },
 	cost = 6,
     eternal_compat = true,
     perishable_compat = true,
@@ -1370,15 +1610,18 @@ SMODS.Joker {
 
             if #card.ability.extra.consumed_cards > 0 then
 
-                G.E_MANAGER:add_event(Event({
-                    func = function()
-                        for k,v in pairs(card.ability.extra.consumed_cards) do
-                            v.ability.perma_bonus = v.ability.perma_bonus + card.ability.extra.bonus_chips
-                        end
-                        return true
-                    end,
-                    blocking = true
-                }))
+                card.ability.extra.bonus_chips = 0
+
+                for k,v in pairs(G.play.cards) do
+                    if SMODS.has_enhancement(v, 'm_stone') then
+                        card.ability.extra.bonus_chips = card.ability.extra.bonus_chips + v.ability.bonus
+                    elseif not SMODS.has_enhancement(v, 'm_aether_fleshstone') then
+                        card.ability.extra.bonus_chips = card.ability.extra.bonus_chips + v.base.nominal
+                    end
+                end
+                for k,v in pairs(card.ability.extra.consumed_cards) do
+                    v.ability.perma_bonus = v.ability.perma_bonus + card.ability.extra.bonus_chips
+                end
 
                 return {
                     message = '+'..card.ability.extra.bonus_chips,
@@ -1425,7 +1668,7 @@ SMODS.Joker {
 
     update = function(self, card, context)
 
-        card.ability.extra.bonus_chips = 0
+        card.ability.extra.bonus_chips_visible = 0
 
         if G.play then
 
@@ -1434,9 +1677,9 @@ SMODS.Joker {
                 for k,v in pairs(G.play.cards) do
 
                     if SMODS.has_enhancement(v, 'm_stone') then
-                        card.ability.extra.bonus_chips = card.ability.extra.bonus_chips + v.ability.bonus
+                        card.ability.extra.bonus_chips_visible = card.ability.extra.bonus_chips_visible + v.ability.bonus
                     elseif not SMODS.has_enhancement(v, 'm_aether_fleshstone') then
-                        card.ability.extra.bonus_chips = card.ability.extra.bonus_chips + v.base.nominal
+                        card.ability.extra.bonus_chips_visible = card.ability.extra.bonus_chips_visible + v.base.nominal
                     end
 
                 end
@@ -1446,9 +1689,9 @@ SMODS.Joker {
                 for k,v in pairs(G.hand.highlighted) do
 
                     if SMODS.has_enhancement(v, 'm_stone') then
-                        card.ability.extra.bonus_chips = card.ability.extra.bonus_chips + v.ability.bonus
+                        card.ability.extra.bonus_chips_visible = card.ability.extra.bonus_chips_visible + v.ability.bonus
                     elseif not SMODS.has_enhancement(v, 'm_aether_fleshstone') then
-                        card.ability.extra.bonus_chips = card.ability.extra.bonus_chips + v.base.nominal
+                        card.ability.extra.bonus_chips_visible = card.ability.extra.bonus_chips_visible + v.base.nominal
                     end
 
                 end
@@ -1478,7 +1721,8 @@ SMODS.Joker {
 		return { vars = {  } }
 	end,
 	rarity = 3,
-	pos = { x = 9, y = 9 },
+	atlas = 'aetherjokers',
+	pos = { x = 3, y = 1 },
 	cost = 8,
     eternal_compat = true,
     perishable_compat = true,
@@ -1515,7 +1759,7 @@ SMODS.Joker {
 
             for k,v in pairs(G.play.cards) do
 
-                if v.ability.name ~= 'Wild Card' and not v.debuff then
+                if not SMODS.has_enhancement(v, 'm_wild') and not v.debuff then
                     SMODS.debuff_card(v, 'prevent_debuff', 'flushifyjoker')
                 end
 
@@ -1593,6 +1837,87 @@ SMODS.Joker {
 }
 
 SMODS.Joker {
+	key = 'turnstile',
+	config = {unlocked = true, discovered = true, extra = {triggers = 0} },
+	loc_vars = function(self, info_queue, card)
+        if G.GAME.inverted then
+            return { key = 'j_aether_turnstile_inverted' }
+        end
+	end,
+	rarity = 4,
+	atlas = 'aetherjokers',
+	pos = { x = 0, y = 0 },
+	cost = 8,
+    eternal_compat = true,
+    perishable_compat = true,
+	calculate = function(self, card, context)
+
+        if (#G.discard.cards == 0 or #G.play.cards > 0 or context.end_of_round) and G.GAME.inverted then
+            G.GAME.inverted = false
+            ease_background_colour{new_colour = G.C.RED}
+            play_sound('whoosh1')
+            G.E_MANAGER:add_event(Event({
+                func = function()
+                    ease_background_colour_blind()
+                    return true
+                end,
+                blocking = true
+            }))
+        end
+
+        if context.end_of_round then
+            card.ability.extra.triggers = 0
+        end
+
+        if context.pre_discard then
+
+            if G.GAME.current_round.discards_left == 1 and not G.GAME.inverted and not hook and card.ability.extra.triggers == 0 then
+
+                card.ability.extra.triggers = 1
+                G.GAME.inverted = true
+
+                G.GAME.current_round.discards_left = G.GAME.current_round.discards_left + 1
+                G.GAME.current_round.discards_used = G.GAME.current_round.discards_used - 1
+
+                play_sound('aether_invertedchips1')
+                play_sound('whoosh2')
+
+            end
+
+            if G.GAME.inverted and #G.discard.cards > 0 then
+                for i = 1, #G.hand.highlighted do
+                    G.E_MANAGER:add_event(Event({
+                        func = function()
+
+                            if #G.discard.cards > 0 then
+                                drawn_card = G.discard.cards[#G.discard.cards]
+                                G.discard:remove_card(drawn_card)
+                                G.hand:emplace(drawn_card)
+                                play_sound('aether_invertedcard1')
+                                drawn_card.ability.discarded = false
+                            end
+
+                            return true
+                        end,
+                        blocking = true
+                    }))
+                    delay(0.2)
+                    G.E_MANAGER:add_event(Event({
+                        func = function()
+                            G.hand:sort()
+                            return true
+                        end,
+                        blocking = true
+                    }))
+                end
+            end
+
+        end
+
+    end
+}
+
+SMODS.Joker {
 	key = 'fleshjoker',
 	config = {unlocked = true, discovered = true, extra = { infect_odds = 10, infected_cards = 0, total_cards = 52, infected_jokers = 0, total_jokers = 1, card_mult = 0.1, joker_mult = 0.5 } },
 	loc_vars = function(self, info_queue, card)
@@ -1603,7 +1928,8 @@ SMODS.Joker {
         end
 	end,
 	rarity = 'aether_flesh',
-	pos = { x = 9, y = 9 },
+	atlas = 'aetherjokers',
+	pos = { x = 2, y = 0 },
 	cost = 1,
     blueprint_compat = true,
     eternal_compat = true,
@@ -1739,8 +2065,9 @@ SMODS.Enhancement {
             '{C:inactive}(Only created by {C:attention}Jokers{C:inactive})',
 		}
 	},
-    pos = { x = 1, y = 0 },
-    config = { extra = {} },
+    atlas = 'aetherenhancers',
+	pos = { x = 1, y = 0 },
+    config = { extra = {triggers = 0} },
     weight = 0,
     in_pool = function(self)
         return false
@@ -1748,7 +2075,7 @@ SMODS.Enhancement {
     overrides_base_rank = true,
     calculate = function(self, card, context)
 
-        if ((context.destroy_card and context.cardarea ~= G.hand) or context.end_of_round or context.pre_discard) and not context.repetition then
+        if ((context.destroy_card and context.cardarea ~= G.hand) or context.end_of_round or context.pre_discard) and not context.repetition and card.ability.extra.triggers == 0 then
 
             delete = false
 
@@ -1765,6 +2092,8 @@ SMODS.Enhancement {
             end
 
             if delete then
+
+                card.ability.extra.triggers = card.ability.extra.triggers + 1
 
                 G.E_MANAGER:add_event(Event({
                     func = function()
@@ -1789,6 +2118,70 @@ SMODS.Enhancement {
 }
 
 SMODS.Enhancement {
+    key = 'counterfeit',
+	loc_txt = {
+		name = 'Counterfeit Card',
+		text = {
+			'{C:attention}Destroyed{} in {C:attention}#1#{} scores',
+		}
+	},
+    atlas = 'aetherenhancers',
+	pos = { x = 3, y = 0 },
+    config = { extra = { uses_left = 3, triggers = 0 } },
+    loc_vars = function(self, info_queue, card)
+        return { vars = { card.ability.extra.uses_left } }
+	end,
+    weight = 0,
+    in_pool = function(self)
+        return false
+    end,
+    overrides_base_rank = true,
+    calculate = function(self, card, context)
+
+        if context.main_scoring and context.cardarea == G.play then
+
+            card.ability.extra.uses_left = card.ability.extra.uses_left - 1
+            if card.ability.extra.uses_left > 0 then
+                return {
+                    message = card.ability.extra.uses_left..'!',
+                    sound = 'cardSlide2',
+                    colour = G.C.RED
+                }
+            elseif card.ability.extra.uses_left == 0 then
+                return {
+                    message = 'Spent!',
+                    sound = 'cardSlide2',
+                    colour = G.C.RED
+                }
+            end
+
+        end
+
+        if context.destroy_card and card.ability.extra.uses_left <= 0 and context.cardarea ~= G.hand and card.ability.extra.triggers == 0 then
+
+            card.ability.extra.triggers = card.ability.extra.triggers + 1
+
+            G.E_MANAGER:add_event(Event({
+                func = function()
+                    card:start_dissolve({G.C.BLACK, G.C.RED, G.C.RED}, true, 5)
+                    return true
+                end,
+                blocking = true
+            }))
+
+            return {
+                message = 'Degraded!',
+                colour = G.C.RED,
+                sound = 'crumple'..math.random(1,5),
+                remove = true
+            }
+
+        end
+
+    end,
+}
+
+SMODS.Enhancement {
     key = 'flesh',
 	loc_txt = {
 		name = 'Flesh Card',
@@ -1800,7 +2193,8 @@ SMODS.Enhancement {
             'end of round, {X:flesh,C:white}PERISHES{} if {C:attention}2',
 		}
 	},
-    pos = { x = 5, y = 0 },
+    atlas = 'aetherenhancers',
+	pos = { x = 2, y = 0 },
     config = { extra = { mult = 'rank', infect_odds = 3, perish_odds = 5, triggers = 0 } },
     loc_vars = function(self, info_queue, card)
 		return { vars = { card.ability.extra.mult, G.GAME.probabilities.normal, card.ability.extra.infect_odds, card.ability.extra.perish_odds } }
@@ -1940,7 +2334,8 @@ SMODS.Enhancement {
             '{C:inactive}(Currently {X:mult,C:white}X#2#{C:inactive} Mult)'
 		}
 	},
-    pos = { x = 5, y = 0 },
+    atlas = 'aetherenhancers',
+	pos = { x = 2, y = 0 },
     config = { extra = { xmult_mod = 0.5, xmult = 1 } },
     loc_vars = function(self, info_queue, card)
 		return { vars = { card.ability.extra.xmult_mod, card.ability.extra.xmult } }
@@ -1958,15 +2353,14 @@ SMODS.Enhancement {
 
         if context.main_scoring and context.cardarea == G.play then
 
-            card.ability.extra.xmult = 1
-
             for k,v in pairs(context.scoring_hand) do
+
+                card.ability.extra.xmult = card.ability.extra.xmult + card.ability.extra.xmult_mod
 
                 if v ~= card and SMODS.has_enhancement(v, 'm_aether_flesh') then
                     card_eval_status_text(card, 'extra', nil, nil, nil, {message = '+X'..card.ability.extra.xmult_mod, sound = 'aether_fleshinfect'..math.random(1, 4), colour = G.C.MULT})
                     G.E_MANAGER:add_event(Event({
                         func = function()
-                            card.ability.extra.xmult = card.ability.extra.xmult + card.ability.extra.xmult_mod
                             v:juice_up(0.3,0.5)
                             return true
                         end,
@@ -2047,12 +2441,13 @@ SMODS.Rarity{
         ['Joker'] = true,
     },
     badge_colour = G.C.FLESH,
-    default_weight = 0.01,
+    default_weight = 0.001,
 }
 
 SMODS.Back{
     name = 'Aether Deck',
     key = 'aetherdeck',
+    atlas = 'aetherenhancers',
     pos = {x = 0, y = 0},
     config = {unlocked = true, discovered = true, extra = {
         aether_jokers = {
@@ -2069,14 +2464,22 @@ SMODS.Back{
                 'tennisjoker',
                 'sleevedjoker',
                 'overkilljoker',
+                'counterfeitjoker',
             },
             [3] = {
                 'handyjoker',
                 'holdingjoker',
                 'flushifyjoker',
-            }
+            },
+            [4] = {
+                'turnstile',
+            },
+            ['special'] = {
+                'fleshjoker',
+            },
         },
-        replace_odds = 4
+        replace_odds = 4,
+        special_odds = 20
     }},
     loc_txt = {
         name = 'Aether Deck',
@@ -2094,17 +2497,6 @@ SMODS.Back{
 	end,
     apply = function(self, back)
 
-        G.E_MANAGER:add_event(Event({
-            func = function()
-
-                SMODS.add_card({
-                    key = 'j_aether_fleshjoker'
-                })
-                return true
-
-            end
-        }))
-
         selected_joker = math.random(#self.config.extra.aether_jokers[3])
 
         if selected_joker % 1 > 0.5 then
@@ -2120,6 +2512,7 @@ SMODS.Back{
                 SMODS.add_card({
                     key = 'j_aether_'..self.config.extra.aether_jokers[3][selected_joker]
                 })
+                play_sound('aether_joker3')
                 return true
 
             end
@@ -2135,7 +2528,13 @@ SMODS.Back{
 
                 if v1.config.center.rarity == 1 or v1.config.center.rarity == 2 or v1.config.center.rarity == 3 and pseudorandom('aetherdeck') < G.GAME.probabilities.normal / self.config.extra.replace_odds then
 
-                    selected_joker = pseudorandom('aetherdeckjoker') * #self.config.extra.aether_jokers[v1.config.center.rarity]
+                    if pseudorandom('aetherdeckspecial') < G.GAME.probabilities.normal / self.config.extra.special_odds then
+                        joker_rarity = 'special'
+                    else
+                        joker_rarity = v1.config.center.rarity
+                    end
+
+                    selected_joker = pseudorandom('aetherdeckjoker') * #self.config.extra.aether_jokers[joker_rarity]
 
                     if selected_joker % 1 > 0.5 then
                         selected_joker = math.ceil(selected_joker)
@@ -2148,7 +2547,7 @@ SMODS.Back{
 
                     for k2,v2 in pairs(G.jokers.cards) do
                     
-                        if v1.config.center.key == 'j_aether_'..self.config.extra.aether_jokers[v1.config.center.rarity][selected_joker] then
+                        if v1.config.center.key == 'j_aether_'..self.config.extra.aether_jokers[joker_rarity][selected_joker] then
                             has_joker = true
                         end
 
@@ -2161,12 +2560,13 @@ SMODS.Back{
 
                                 v1:remove()
                                 local new_joker = SMODS.add_card({
-                                    key = 'j_aether_'..self.config.extra.aether_jokers[v1.config.center.rarity][selected_joker],
+                                    key = 'j_aether_'..self.config.extra.aether_jokers[joker_rarity][selected_joker],
                                     area = G.shop_jokers
                                 })
                                 create_shop_card_ui(new_joker, 'Joker', G.shop_jokers)
                                 new_joker.states.visible = false
-                                new_joker:start_materialize()
+                                new_joker:start_materialize({G.C.AETHER}, false, 1)
+                                play_sound('aether_joker'..joker_rarity)
 
                                 return true
 
