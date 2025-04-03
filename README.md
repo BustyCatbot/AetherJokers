@@ -23,6 +23,8 @@ A mod that adds a few misc jokers with unique mechanics. None of the implemented
 
 - Overkill Joker : Gives $1 at end of round for every 0.5x total score over score requirement in a single hand. (Max of $20)
 
+- Counterfeit Joker : Adds Counterfeit copies of all highlighted cards to your deck when sold
+
 ### Rare Jokers
 - Handy Joker : +1 hand size per hand on first draw. -1 hand size on each hand played
 
@@ -30,10 +32,13 @@ A mod that adds a few misc jokers with unique mechanics. None of the implemented
 
 - Flushify Joker : Turns any played Straight, Full House, or Five of a Kind into its Flush Variant and converts all scored cards into Wild Cards
 
-- Flesh Joker : SPREAD
+### Legendary Jokers
+- Turnstile : Forward > Inverts on last discard once per round. Draw from deck. Inverted > Reverts when discard pile is empty. Draw from discard pile
 
 ### Enhancements
 - Sleeved : Gets destroyed when played, discarded, at end of round, or if modified (Only created by Jokers)
+
+- Counterfeit : Destroyed after 3 scores
 
 ### Editions
 None yet
