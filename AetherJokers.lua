@@ -7,6 +7,8 @@
 --- BADGE_COLOR: a040ff
 --- PREFIX: aether
 
+local config = SMODS.current_mod.config
+
 SMODS.Atlas {
 	key = 'aetherjokers',
 	path = 'AetherJokers.png',
@@ -28,17 +30,20 @@ function loc_colour(_c, _default)
     G.C.AETHER = HEX('8000FF')
     G.ARGS.LOC_COLOURS['aether'] = G.C.AETHER
 
-    G.C.CONSUMED = HEX('FF70B0')
-    G.ARGS.LOC_COLOURS['consumed'] = G.C.CONSUMED
-
     G.C.FLUSH = HEX('50D0C0')
     G.ARGS.LOC_COLOURS['flush'] = G.C.FLUSH
+
+    G.C.FLESH = HEX('8A102A')
+    G.ARGS.LOC_COLOURS['flesh'] = G.C.FLESH
+
+    G.C.CONSUMED = HEX('FF70B0')
+    G.ARGS.LOC_COLOURS['consumed'] = G.C.CONSUMED
 
     G.C.SLEEVED = HEX('FF8050')
     G.ARGS.LOC_COLOURS['sleeved'] = G.C.SLEEVED
 
-    G.C.FLESH = HEX('8A102A')
-    G.ARGS.LOC_COLOURS['flesh'] = G.C.FLESH
+    G.C.COUNTERFEIT = HEX('BAC06A')
+    G.ARGS.LOC_COLOURS['counterfeit'] = G.C.COUNTERFEIT
 
     return ret
 end
@@ -111,31 +116,25 @@ function Card:calculate_joker(context)
             self.force_trigger = false
 
             if self.ability.t_chips > 0 then
-
                 return {
                     message = localize{type='variable',key='a_chips',vars={self.ability.t_chips}},
                     chip_mod = self.ability.t_chips
                 }
-
             end
 
             if self.ability.t_mult > 0 then
-
                 return {
                     message = localize{type='variable',key='a_mult',vars={self.ability.t_mult}},
                     mult_mod = self.ability.t_mult
                 }
-
             end
 
             if self.ability.Xmult > 0 then
-
                 return {
                     message = localize{type='variable',key='a_xmult',vars={self.ability.x_mult}},
                     colour = G.C.RED,
                     Xmult_mod = self.ability.x_mult
                 }
-
             end
 
             if self.ability.name == 'Seance' and #G.consumeables.cards + G.GAME.consumeable_buffer < G.consumeables.config.card_limit then
@@ -173,17 +172,26 @@ function Card:use_consumeable(area, copier)
 
     for k,v in pairs(G.hand.highlighted) do
 
-        if SMODS.has_enhancement(v, 'm_aether_sleeved') then
+        if self.ability.effect == 'Enhance' then
 
-            card_eval_status_text(v, 'extra', nil, nil, nil, {message = 'Sleeved!', sound = 'highlight1', colour = G.C.SLEEVED})
-            G.E_MANAGER:add_event(Event({
-                func = function()
-                    v:start_dissolve({G.C.BLACK, G.C.SLEEVED, G.C.SLEEVED}, false, 5)
-                    delay(1)
-                    v:remove()
-                    return true
-                end
-            }))
+            if SMODS.has_enhancement(v, 'm_aether_sleeved') then
+
+                card_eval_status_text(v, 'extra', nil, nil, nil, {message = 'Sleeved!', sound = 'highlight1', colour = G.C.SLEEVED})
+                G.E_MANAGER:add_event(Event({
+                    func = function()
+                        v:start_dissolve({G.C.BLACK, G.C.SLEEVED, G.C.SLEEVED}, false, 5)
+                        delay(1)
+                        v:remove()
+                        return true
+                    end
+                }))
+
+            end
+
+            if SMODS.has_enhancement(v, 'm_aether_counterfeit') then
+                card_eval_status_text(v, 'extra', nil, nil, nil, {message = 'Laundered!', sound = 'highlight1', colour = G.C.COUNTERFEIT})
+                ease_dollars(v.ability.extra.uses_left)
+            end
 
         end
 
@@ -196,16 +204,26 @@ local base_can_discard = G.FUNCS.can_discard
 G.FUNCS.can_discard = function(e)
     local ret = base_can_discard(e)
 
-        if G.GAME.inverted then
-            e.config.colour = G.C.BLUE
-            e.config.button = 'inverted_discard_cards_from_highlighted'
-            ease_background_colour{new_colour = G.C.BLUE}
+        if next(SMODS.find_card('j_aether_turnstile')) then
+            if (G.GAME.inverted or (SMODS.find_card('j_aether_turnstile') and SMODS.find_card('j_aether_turnstile')[1].ability.extra.triggers == 0 and G.GAME.current_round.discards_left <= 0)) and #G.hand.highlighted > 0 then
+                e.config.colour = G.C.BLUE
+                e.config.button = 'inverted_discard_cards_from_highlighted'
+            end
         end
 
     return ret
 end
 
 G.FUNCS.inverted_discard_cards_from_highlighted = function(e, hook)
+
+    if G.GAME.current_round.discards_left <= 0 then
+
+        SMODS.find_card('j_aether_turnstile')[1].ability.extra.triggers = 1
+        G.GAME.inverted = true
+        play_sound('aether_invertedchips1')
+
+    end
+
     stop_use()
     G.CONTROLLER.interrupt.focus = true
     G.CONTROLLER:save_cardarea_focus('hand')
@@ -260,13 +278,15 @@ G.FUNCS.inverted_discard_cards_from_highlighted = function(e, hook)
         check_for_unlock({type = 'discard_custom', cards = cards})
         if not hook then
             if G.GAME.modifiers.discard_cost then
-                ease_dollars(-G.GAME.modifiers.discard_cost)
+                ease_dollars(G.GAME.modifiers.discard_cost)
             end
             if G.GAME.current_round.discards_left < G.GAME.round_resets.discards then
                 ease_discard(1)
                 play_sound('aether_invertedchips1')
             end
-            G.GAME.current_round.discards_used = G.GAME.current_round.discards_used - 1
+            if G.GAME.current_round.discards_used > 0 then
+                G.GAME.current_round.discards_used = G.GAME.current_round.discards_used - 1
+            end
             G.STATE = G.STATES.DRAW_TO_HAND
             G.E_MANAGER:add_event(Event({
                 trigger = 'immediate',
@@ -278,6 +298,148 @@ G.FUNCS.inverted_discard_cards_from_highlighted = function(e, hook)
         end
     end
 end
+
+SMODS.Sound({
+    vol = 1,
+    pitch = 1,
+    key = 'musicmain',
+    path = 'musicmain.ogg',
+    sync = true,
+    select_music_track = function()
+        if config.music then
+            return true and 1 or false
+        end
+    end
+})
+
+SMODS.Sound({
+    vol = 1,
+    pitch = 1,
+    key = 'musicmaininvert',
+    path = 'musicmaininvert.ogg',
+    sync = true,
+    select_music_track = function()
+        if config.music and G.GAME.inverted then
+            return true and 10 or false
+        end
+    end
+})
+
+SMODS.Sound({
+    vol = 1,
+    pitch = 1,
+    key = 'musicboss',
+    path = 'musicboss.ogg',
+    sync = true,
+    select_music_track = function()
+        if G.GAME.blind then
+            if config.music and G.GAME.blind.boss and not G.GAME.inverted then
+                return true and 10 or false
+            end
+        end
+    end
+})
+
+SMODS.Sound({
+    vol = 1,
+    pitch = 1,
+    key = 'musicbossinvert',
+    path = 'musicbossinvert.ogg',
+    sync = true,
+    select_music_track = function()
+        if G.GAME.blind then
+            if config.music and G.GAME.blind.boss and G.GAME.inverted then
+                return true and 10 or false
+            end
+        end
+    end
+})
+
+SMODS.Sound({
+    vol = 1,
+    pitch = 1,
+    key = 'musicshop',
+    path = 'musicshop.ogg',
+    sync = true,
+    select_music_track = function()
+        if config.music and G.shop and not G.shop.REMOVED then
+            return true and 8 or false
+        end
+    end
+})
+
+SMODS.Sound({
+    vol = 1,
+    pitch = 1,
+    key = 'musicbooster',
+    path = 'musicbooster.ogg',
+    sync = true,
+    select_music_track = function()
+        if config.music and G.booster_pack and not G.booster_pack.REMOVED then
+            return true and 9 or false
+        end
+    end
+})
+
+SMODS.Sound({
+    vol = 1,
+    pitch = 1,
+    key = 'musicboosterplanet',
+    path = 'musicboosterplanet.ogg',
+    sync = true,
+    select_music_track = function()
+        if SMODS.OPENED_BOOSTER then
+            if config.music and G.booster_pack and not G.booster_pack.REMOVED and SMODS.OPENED_BOOSTER.ability.name:find('Celestial') then
+                return true and 10 or false
+            end
+        end
+    end
+})
+
+SMODS.Sound({
+    vol = 1,
+    pitch = 1,
+    key = 'musicboostertarot',
+    path = 'musicboostertarot.ogg',
+    sync = true,
+    select_music_track = function()
+        if SMODS.OPENED_BOOSTER then
+            if config.music and G.booster_pack and not G.booster_pack.REMOVED and SMODS.OPENED_BOOSTER.ability.name:find('Arcana') then
+                return true and 10 or false
+            end
+        end
+    end
+})
+
+SMODS.Sound({
+    vol = 1,
+    pitch = 1,
+    key = 'musicboosterspectral',
+    path = 'musicboosterspectral.ogg',
+    sync = true,
+    select_music_track = function()
+        if SMODS.OPENED_BOOSTER then
+            if config.music and G.booster_pack and not G.booster_pack.REMOVED and SMODS.OPENED_BOOSTER.ability.name:find('Spectral') then
+                return true and 10 or false
+            end
+        end
+    end
+})
+
+SMODS.Sound({
+    vol = 1,
+    pitch = 1,
+    key = 'musicboosterjoker',
+    path = 'musicboosterjoker.ogg',
+    sync = true,
+    select_music_track = function()
+        if SMODS.OPENED_BOOSTER then
+            if config.music and G.booster_pack and not G.booster_pack.REMOVED and SMODS.OPENED_BOOSTER.ability.name:find('Buffoon') then
+                return true and 10 or false
+            end
+        end
+    end
+})
 
 SMODS.Sound({
     key = 'joker1',
@@ -506,7 +668,7 @@ SMODS.Sound({
     path = 'invertedmusic1.ogg',
     sync = true,
     select_music_track = function()
-        if G.GAME.blind and not G.GAME.blind.config.blind.boss then
+        if G.GAME.blind and not G.GAME.blind.config.blind.boss and not config.music then
             return G.GAME.inverted and 10 or false
         end
     end
@@ -519,7 +681,7 @@ SMODS.Sound({
     path = 'invertedmusic5.ogg',
     sync = true,
     select_music_track = function()
-        if G.GAME.blind and G.GAME.blind.config.blind.boss then
+        if G.GAME.blind and G.GAME.blind.config.blind.boss and not config.music then
             return G.GAME.inverted and 10 or false
         end
     end
@@ -889,8 +1051,8 @@ SMODS.Joker {
 	loc_txt = {
 		name = 'Backseat Joker',
 		text = {
-			'Adds {C:attention}double{} base chips and {C:attention}half',
-            'bonus chips of all cards held in hand',
+			'Adds {C:attention}double{} base {C:chips}chips{} and {C:attention}half',
+            'bonus {C:chips}chips{} of all cards held in hand',
             '{C:inactive}(Currently {C:chips}+#1#{C:inactive} Chips)'
 		}
 	},
@@ -1044,12 +1206,10 @@ SMODS.Joker {
 	loc_txt = {
 		name = 'Stop Card',
 		text = {
-			'{C:red}Debuffs{} {C:attention}Joker{} to the left',
-            '{C:red}Debuffs{} first hand drawn',
-            'if leftmost joker'
+			'{C:red}Debuffs{} {C:attention}Joker{} to the left'
 		}
 	},
-	config = {unlocked = true, discovered = true, extra = { current_pos = 0, debuffed_joker = 0, marked_for_sell = 0 } },
+	config = {unlocked = true, discovered = true, extra = { current_pos = 0, marked_for_sell = 0 } },
 	loc_vars = function(self, info_queue, card)
 		return { vars = {} }
 	end,
@@ -1279,7 +1439,7 @@ SMODS.Joker {
 		text = {
 			'{C:green}4x #1# in #2#{} chance to',
             'draw a {C:sleeved}Sleeved {C:attention}Ace{} to',
-            'hand on first draw'
+            'hand on {C:attention}first draw{}'
 		}
 	},
 	config = {unlocked = true, discovered = true, extra = { drawn_aces = {}, card_odds = 3 } },
@@ -1394,8 +1554,8 @@ SMODS.Joker {
 	loc_txt = {
 		name = 'Counterfeit Joker',
 		text = {
-			'Adds {C:attention}Counterfeit{} copies of all highlighted',
-            'cards to your deck when sold'
+			'Adds {C:counterfeit}Counterfeit{} copies of all  {C:attention}highlighted{}',
+            'cards to your {C:attention}deck{} when {C:money}sold{}'
 		}
 	},
 	config = {unlocked = true, discovered = true, extra = {} },
@@ -1447,7 +1607,7 @@ SMODS.Joker {
 		text = {
 			'{C:attention}+1{} hand size per',
             'hand on first draw',
-            '{C:attention}-1{} hand size on',
+            '{C:red}-1{} hand size on',
             'each hand played'
 		}
 	},
@@ -1533,10 +1693,10 @@ SMODS.Joker {
             'played hand if hand contains {C:attention}5{} cards',
             'Draws all {C:consumed}Consumed{} cards to hand when sold',
             '{C:consumed}Consumed{} cards permanently gain',
-            'base chips of all scored cards as',
-            'extra chips for each played hand',
+            'base chips of all scored cards for',
+            'each played hand',
             '{C:red}-$1{} sell value for every {C:attention}3{} cards stored',
-            '{C:inactive}(Currently {C:chips}+#1#{C:inactive})',
+            '{C:inactive}(Currently {C:chips}+#1#{C:inactive} Chips)',
             '{C:inactive}(Holding {C:consumed}#2#{C:inactive} Cards)'
 		}
 	},
@@ -1838,11 +1998,12 @@ SMODS.Joker {
 
 SMODS.Joker {
 	key = 'turnstile',
-	config = {unlocked = true, discovered = true, extra = {triggers = 0} },
+	config = {unlocked = true, discovered = true, extra = {triggers = 0, discarded_cards = {}} },
 	loc_vars = function(self, info_queue, card)
         if G.GAME.inverted then
             return { key = 'j_aether_turnstile_inverted' }
         end
+        return { vars = {card.ability.extra.triggers} }
 	end,
 	rarity = 4,
 	atlas = 'aetherjokers',
@@ -1852,10 +2013,9 @@ SMODS.Joker {
     perishable_compat = true,
 	calculate = function(self, card, context)
 
-        if (#G.discard.cards == 0 or #G.play.cards > 0 or context.end_of_round) and G.GAME.inverted then
+        if (#G.discard.cards == 0 or #G.play.cards > 0 or context.end_of_round) and G.GAME.inverted and not context.blueprint then
             G.GAME.inverted = false
             ease_background_colour{new_colour = G.C.RED}
-            play_sound('whoosh1')
             G.E_MANAGER:add_event(Event({
                 func = function()
                     ease_background_colour_blind()
@@ -1869,20 +2029,9 @@ SMODS.Joker {
             card.ability.extra.triggers = 0
         end
 
-        if context.pre_discard then
+        if context.pre_discard and not context.blueprint then
 
-            if G.GAME.current_round.discards_left == 1 and not G.GAME.inverted and not hook and card.ability.extra.triggers == 0 then
-
-                card.ability.extra.triggers = 1
-                G.GAME.inverted = true
-
-                G.GAME.current_round.discards_left = G.GAME.current_round.discards_left + 1
-                G.GAME.current_round.discards_used = G.GAME.current_round.discards_used - 1
-
-                play_sound('aether_invertedchips1')
-                play_sound('whoosh2')
-
-            end
+            card.ability.extra.discarded_cards = G.hand.highlighted
 
             if G.GAME.inverted and #G.discard.cards > 0 then
                 for i = 1, #G.hand.highlighted do
@@ -1914,6 +2063,14 @@ SMODS.Joker {
 
         end
 
+    end,
+
+    update = function(self, card, context)
+
+        if G.GAME.inverted then
+            ease_background_colour{new_colour = G.C.BLUE}
+        end
+
     end
 }
 
@@ -1922,11 +2079,14 @@ SMODS.Joker {
 	config = {unlocked = true, discovered = true, extra = { infect_odds = 10, infected_cards = 0, total_cards = 52, infected_jokers = 0, total_jokers = 1, card_mult = 0.1, joker_mult = 0.5 } },
 	loc_vars = function(self, info_queue, card)
         if card.area == G.jokers then
+            info_queue[#info_queue + 1] = G.P_CENTERS.m_aether_flesh
+            info_queue[#info_queue + 1] = G.P_CENTERS.m_aether_fleshstone
             return { vars = { G.GAME.probabilities.normal, card.ability.extra.infect_odds, card.ability.extra.infected_cards, card.ability.extra.total_cards, card.ability.extra.infected_jokers, card.ability.extra.total_jokers, 1 + (card.ability.extra.infected_cards * card.ability.extra.card_mult) + (card.ability.extra.infected_jokers * card.ability.extra.joker_mult) } }
         else
-            return { key = 'j_aether_fleshjoker_shop' }
+            return { key = 'j_aether_fleshjoker_hidden' }
         end
 	end,
+    no_collection = true,
 	rarity = 'aether_flesh',
 	atlas = 'aetherjokers',
 	pos = { x = 2, y = 0 },
@@ -2059,9 +2219,9 @@ SMODS.Enhancement {
 	loc_txt = {
 		name = 'Sleeved Card',
 		text = {
-			'Gets {C:attention}destroyed{} when {C:blue}played{},',
-            '{C:red}discarded{}, at {C:attention}end of round{},',
-            'or if {C:tarot}modified{}',
+			'Gets {C:sleeved}Sleeved{} when {C:blue}played{},',
+            '{C:red}discarded{}, {C:tarot}enhanced{},',
+            'or at {C:attention}end of round{}',
             '{C:inactive}(Only created by {C:attention}Jokers{C:inactive})',
 		}
 	},
@@ -2122,14 +2282,17 @@ SMODS.Enhancement {
 	loc_txt = {
 		name = 'Counterfeit Card',
 		text = {
-			'{C:attention}Destroyed{} in {C:attention}#1#{} scores',
+			'{C:counterfeit}Degrades{} in {C:attention}#1#{} scores',
+            'Gives {C:money}$1{} per {C:attention}scores{} left',
+            'when manually {C:tarot}enhanced{}',
+            '{C:inactive}(Only created by {C:attention}Jokers{C:inactive})',
 		}
 	},
     atlas = 'aetherenhancers',
 	pos = { x = 3, y = 0 },
-    config = { extra = { uses_left = 3, triggers = 0 } },
+    config = { extra = { uses_left = 4, triggers = 0, } },
     loc_vars = function(self, info_queue, card)
-        return { vars = { card.ability.extra.uses_left } }
+        return { vars = { card.ability.extra.uses_left - 1 } }
 	end,
     weight = 0,
     in_pool = function(self)
@@ -2140,30 +2303,36 @@ SMODS.Enhancement {
 
         if context.main_scoring and context.cardarea == G.play then
 
+            if card.ability.extra.uses_left == 2 then
+                card.base.nominal = 0
+                card.base.perma_bonus = 0
+            end
+
             card.ability.extra.uses_left = card.ability.extra.uses_left - 1
-            if card.ability.extra.uses_left > 0 then
+
+            if card.ability.extra.uses_left > 1 then
                 return {
-                    message = card.ability.extra.uses_left..'!',
+                    message = (card.ability.extra.uses_left - 1)..'!',
                     sound = 'cardSlide2',
-                    colour = G.C.RED
+                    colour = G.C.COUNTERFEIT
                 }
-            elseif card.ability.extra.uses_left == 0 then
+            elseif card.ability.extra.uses_left == 1 then
                 return {
                     message = 'Spent!',
                     sound = 'cardSlide2',
-                    colour = G.C.RED
+                    colour = G.C.COUNTERFEIT
                 }
             end
 
         end
 
-        if context.destroy_card and card.ability.extra.uses_left <= 0 and context.cardarea ~= G.hand and card.ability.extra.triggers == 0 then
+        if context.destroy_card and card.ability.extra.uses_left <= 0 and context.cardarea ~= G.hand and card.ability.extra.triggers <= 1 then
 
             card.ability.extra.triggers = card.ability.extra.triggers + 1
 
             G.E_MANAGER:add_event(Event({
                 func = function()
-                    card:start_dissolve({G.C.BLACK, G.C.RED, G.C.RED}, true, 5)
+                    card:start_dissolve({G.C.BLACK, G.C.COUNTERFEIT, G.C.COUNTERFEIT}, true, 5)
                     return true
                 end,
                 blocking = true
@@ -2171,7 +2340,7 @@ SMODS.Enhancement {
 
             return {
                 message = 'Degraded!',
-                colour = G.C.RED,
+                colour = G.C.COUNTERFEIT,
                 sound = 'crumple'..math.random(1,5),
                 remove = true
             }
@@ -2186,7 +2355,7 @@ SMODS.Enhancement {
 	loc_txt = {
 		name = 'Flesh Card',
 		text = {
-            '{C:mult}+#1#{} mult',
+            '{C:mult}+#1#{} Mult',
 			'{C:green}#2# in #3#{} chance to {X:flesh,C:white}SPREAD{} to each',
             'card held in hand at end of round',
             '{C:green}#1# in #4#{} chance to {X:flesh,C:white}DECAY{} at',
@@ -2199,6 +2368,7 @@ SMODS.Enhancement {
     loc_vars = function(self, info_queue, card)
 		return { vars = { card.ability.extra.mult, G.GAME.probabilities.normal, card.ability.extra.infect_odds, card.ability.extra.perish_odds } }
 	end,
+    no_collection = true,
     weight = 0,
     in_pool = function(self)
         return false
@@ -2328,7 +2498,7 @@ SMODS.Enhancement {
 	loc_txt = {
 		name = 'Flesh Mass',
 		text = {
-            '{X:mult,C:white}+X#1#{} per {C:flesh}Flesh Card{} scored',
+            '{X:mult,C:white}+X#1#{} Mult per {C:flesh}Flesh Card{} scored',
             '{X:flesh,C:white}PERISHES{} and {X:flesh,C:white}FEEDS{} all',
             'played {C:flesh}Flesh Cards{} when scored',
             '{C:inactive}(Currently {X:mult,C:white}X#2#{C:inactive} Mult)'
@@ -2340,6 +2510,7 @@ SMODS.Enhancement {
     loc_vars = function(self, info_queue, card)
 		return { vars = { card.ability.extra.xmult_mod, card.ability.extra.xmult } }
 	end,
+    no_collection = true,
     weight = 0,
     in_pool = function(self)
         return false
@@ -2471,11 +2642,9 @@ SMODS.Back{
                 'holdingjoker',
                 'flushifyjoker',
             },
-            [4] = {
-                'turnstile',
-            },
             ['special'] = {
                 'fleshjoker',
+                'turnstile',
             },
         },
         replace_odds = 4,
@@ -2526,7 +2695,7 @@ SMODS.Back{
 
             for k1,v1 in pairs(G.shop_jokers.cards) do
 
-                if v1.config.center.rarity == 1 or v1.config.center.rarity == 2 or v1.config.center.rarity == 3 and pseudorandom('aetherdeck') < G.GAME.probabilities.normal / self.config.extra.replace_odds then
+                if (v1.config.center.rarity == 1 or v1.config.center.rarity == 2 or v1.config.center.rarity == 3) and pseudorandom('aetherdeck') < G.GAME.probabilities.normal / self.config.extra.replace_odds then
 
                     if pseudorandom('aetherdeckspecial') < G.GAME.probabilities.normal / self.config.extra.special_odds then
                         joker_rarity = 'special'
@@ -2544,13 +2713,8 @@ SMODS.Back{
                     end
 
                     local has_joker = false
-
-                    for k2,v2 in pairs(G.jokers.cards) do
-                    
-                        if v1.config.center.key == 'j_aether_'..self.config.extra.aether_jokers[joker_rarity][selected_joker] then
-                            has_joker = true
-                        end
-
+                    if SMODS.find_card('j_aether_'..self.config.extra.aether_jokers[joker_rarity][selected_joker], true) then
+                        has_joker = true
                     end
 
                     if not has_joker then
@@ -2585,3 +2749,37 @@ SMODS.Back{
         
     end
 }
+
+SMODS.current_mod.config_tab = function()
+
+    return {
+        n = G.UIT.ROOT,
+        config = { r = 0.1, minw = 8, align = "tm", padding = 0.2, colour = G.C.BLACK },
+        nodes = {
+            {
+                n = G.UIT.R,
+                config = { padding = 0.2 },
+                nodes = {
+                    {
+                        n = G.UIT.C,
+                        config = { align = "cm" },
+                        nodes = {
+                            {
+                                n = G.UIT.R,
+                                config = { align = "cm", padding = 0.01 },
+                                nodes = {
+                                    create_toggle({
+                                        label = 'Custom Music',
+                                        ref_table = config,
+                                        ref_value = 'music'
+                                    })
+                                }
+                            },
+                        }
+                    },
+                }
+            },
+            { n = G.UIT.R, config = { minh = 0.1 } }
+        }
+    }
+end
