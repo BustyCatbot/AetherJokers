@@ -59,16 +59,12 @@ function loc_colour(_c, _default)
     G.C.COUNTERFEIT = HEX('BAC06A')
     G.ARGS.LOC_COLOURS['counterfeit'] = G.C.COUNTERFEIT
 
-    G.C.AETHERSPADES = HEX('7a73bb')
     G.ARGS.LOC_COLOURS['aetherspades'] = G.C.AETHERSPADES
 
-    G.C.AETHERHEARTS = HEX('ff6368')
     G.ARGS.LOC_COLOURS['aetherhearts'] = G.C.AETHERHEARTS
 
-    G.C.AETHERCLUBS = HEX('449d95')
     G.ARGS.LOC_COLOURS['aetherclubs'] = G.C.AETHERCLUBS
 
-    G.C.AETHERDIAMONDS = HEX('f28a3c')
     G.ARGS.LOC_COLOURS['aetherdiamonds'] = G.C.AETHERDIAMONDS
 
     return ret
@@ -712,6 +708,11 @@ SMODS.Sound({
         end
     end
 })
+
+G.C.AETHERSPADES = HEX('5E579C')
+G.C.AETHERHEARTS = HEX('EC2D33')
+G.C.AETHERCLUBS = HEX('217C75')
+G.C.AETHERDIAMONDS = HEX('D66B1B')
 
 SMODS.DeckSkin {
     key = 'aetherspades',
