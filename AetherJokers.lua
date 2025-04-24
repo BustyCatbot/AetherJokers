@@ -23,6 +23,20 @@ SMODS.Atlas {
 	py = 95
 }
 
+SMODS.Atlas {
+	key = 'aethersuitslc',
+	path = 'AetherSuitsLC.png',
+	px = 71,
+	py = 95
+}
+
+SMODS.Atlas {
+	key = 'aethersuitshc',
+	path = 'AetherSuitsHC.png',
+	px = 71,
+	py = 95
+}
+
 local base_loc_colour = loc_colour
 function loc_colour(_c, _default)
     local ret = base_loc_colour(_c, _default)
@@ -44,6 +58,18 @@ function loc_colour(_c, _default)
 
     G.C.COUNTERFEIT = HEX('BAC06A')
     G.ARGS.LOC_COLOURS['counterfeit'] = G.C.COUNTERFEIT
+
+    G.C.AETHERSPADES = HEX('7a73bb')
+    G.ARGS.LOC_COLOURS['aetherspades'] = G.C.AETHERSPADES
+
+    G.C.AETHERHEARTS = HEX('ff6368')
+    G.ARGS.LOC_COLOURS['aetherhearts'] = G.C.AETHERHEARTS
+
+    G.C.AETHERCLUBS = HEX('449d95')
+    G.ARGS.LOC_COLOURS['aetherclubs'] = G.C.AETHERCLUBS
+
+    G.C.AETHERDIAMONDS = HEX('f28a3c')
+    G.ARGS.LOC_COLOURS['aetherdiamonds'] = G.C.AETHERDIAMONDS
 
     return ret
 end
@@ -687,6 +713,102 @@ SMODS.Sound({
     end
 })
 
+SMODS.DeckSkin {
+    key = 'aetherspades',
+    suit = 'Spades',
+    loc_text = 'Aether Spades',
+    palettes = {
+        {
+            key = 'lc',
+            ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            display_ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            atlas = 'aether_aethersuitslc',
+            pos_style = 'deck',
+            colour = G.C.AETHERSPADES,
+        },
+        {
+            key = 'hc',
+            ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            display_ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            atlas = 'aether_aethersuitshc',
+            pos_style = 'deck',
+            colour = G.C.AETHERSPADES,
+        }
+    }
+}
+
+SMODS.DeckSkin {
+    key = 'aetherhearts',
+    suit = 'Hearts',
+    loc_text = 'Aether Hearts',
+    palettes = {
+        {
+            key = 'lc',
+            ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            display_ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            atlas = 'aether_aethersuitslc',
+            pos_style = 'deck',
+            colour = G.C.AETHERHEARTS,
+        },
+        {
+            key = 'hc',
+            ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            display_ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            atlas = 'aether_aethersuitshc',
+            pos_style = 'deck',
+            colour = G.C.AETHERHEARTS,
+        }
+    }
+}
+
+SMODS.DeckSkin {
+    key = 'aetherclubs',
+    suit = 'Clubs',
+    loc_text = 'Aether Clubs',
+    palettes = {
+        {
+            key = 'lc',
+            ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            display_ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            atlas = 'aether_aethersuitslc',
+            pos_style = 'deck',
+            colour = G.C.AETHERCLUBS,
+        },
+        {
+            key = 'hc',
+            ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            display_ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            atlas = 'aether_aethersuitshc',
+            pos_style = 'deck',
+            colour = G.C.AETHERCLUBS,
+        }
+    }
+}
+
+SMODS.DeckSkin {
+    key = 'aetherdiamonds',
+    suit = 'Diamonds',
+    loc_text = 'Aether Diamonds',
+    palettes = {
+        {
+            key = 'lc',
+            ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            display_ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            atlas = 'aether_aethersuitslc',
+            pos_style = 'deck',
+            colour = G.C.AETHERDIAMONDS,
+        },
+        {
+            key = 'hc',
+            ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            display_ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
+            atlas = 'aether_aethersuitshc',
+            pos_style = 'deck',
+            colour = G.C.AETHERDIAMONDS,
+        }
+    }
+}
+
 SMODS.Joker {
 	key = 'drugtest',
 	loc_txt = {
@@ -1091,7 +1213,7 @@ SMODS.Joker {
                 elseif not SMODS.has_enhancement(context.other_card, 'm_aether_fleshstone') then
 
                     return {
-                        chips = (context.other_card.base.nominal * 2) + math.ceil(context.other_card.ability.perma_bonus / 2),
+                        chips = (context.other_card.base.nominal * 2) + (context.other_card.ability.bonus / 2) + math.ceil(context.other_card.ability.perma_bonus / 2),
                         card = context.other_card
                     }
 
@@ -1209,7 +1331,7 @@ SMODS.Joker {
 			'{C:red}Debuffs{} {C:attention}Joker{} to the left'
 		}
 	},
-	config = {unlocked = true, discovered = true, extra = { current_pos = 0, marked_for_sell = 0 } },
+	config = {unlocked = true, discovered = true, extra = { current_pos = 0, marked_for_sell = 0, debuffed_joker = 0 } },
 	loc_vars = function(self, info_queue, card)
 		return { vars = {} }
 	end,
@@ -1222,6 +1344,7 @@ SMODS.Joker {
 	update = function(self, card, context)
 
         local currentpos = 0
+        local present = false
 
         if G.jokers then
 
@@ -1232,6 +1355,7 @@ SMODS.Joker {
                 if v == card then
 
                     card.ability.extra.current_pos = currentpos
+                    present = true
                     break
 
                 end
@@ -1240,7 +1364,7 @@ SMODS.Joker {
 
             local debuffjoker
 
-            if card.ability.extra.current_pos and card.ability.extra.marked_for_sell == 0 then
+            if card.ability.extra.current_pos and card.ability.extra.marked_for_sell == 0 and present then
 
                 debuffjoker = G.jokers.cards[card.ability.extra.current_pos - 1]
 
@@ -1554,7 +1678,7 @@ SMODS.Joker {
 	loc_txt = {
 		name = 'Counterfeit Joker',
 		text = {
-			'Adds {C:counterfeit}Counterfeit{} copies of all  {C:attention}highlighted{}',
+			'Adds {C:counterfeit}Counterfeit{} copies of all {C:attention}highlighted{}',
             'cards to your {C:attention}deck{} when {C:money}sold{}'
 		}
 	},
@@ -2326,7 +2450,7 @@ SMODS.Enhancement {
 
         end
 
-        if context.destroy_card and card.ability.extra.uses_left <= 0 and context.cardarea ~= G.hand and card.ability.extra.triggers <= 1 then
+        if context.destroy_card and card.ability.extra.uses_left <= 1 and context.cardarea ~= G.hand and card.ability.extra.triggers <= 1 then
 
             card.ability.extra.triggers = card.ability.extra.triggers + 1
 
@@ -2358,8 +2482,9 @@ SMODS.Enhancement {
             '{C:mult}+#1#{} Mult',
 			'{C:green}#2# in #3#{} chance to {X:flesh,C:white}SPREAD{} to each',
             'card held in hand at end of round',
-            '{C:green}#1# in #4#{} chance to {X:flesh,C:white}DECAY{} at',
-            'end of round, {X:flesh,C:white}PERISHES{} if {C:attention}2',
+            '{C:green}#1# in #4#{} chance to {X:flesh,C:white}DECAY{} when',
+            '{C:blue}played{}, {C:red}discarded{}, or at {C:attention}end of round{},',
+            '{X:flesh,C:white}PERISHES{} if {C:attention}2',
 		}
 	},
     atlas = 'aetherenhancers',
@@ -2712,12 +2837,7 @@ SMODS.Back{
                         if selected_joker < 1 then selected_joker = 1 end
                     end
 
-                    local has_joker = false
-                    if SMODS.find_card('j_aether_'..self.config.extra.aether_jokers[joker_rarity][selected_joker], true) then
-                        has_joker = true
-                    end
-
-                    if not has_joker then
+                    if not next(SMODS.find_card('j_aether_'..self.config.extra.aether_jokers[joker_rarity][selected_joker], true)) then
 
                         G.E_MANAGER:add_event(Event({
                             func = function()
