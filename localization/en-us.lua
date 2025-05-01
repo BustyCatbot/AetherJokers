@@ -21,8 +21,8 @@ return {
             j_aether_turnstile={
                 name='Turnstile',
                 text={
-                    '{X:blue,C:white}Inverts{} on {C:attention}0th{} {C:red}discards{} once per round',
-                    'Draw from {C:blue}deck{}',
+                    '{X:blue,C:white}Inverts{} on {C:attention}0th{} {C:red}discard{} once per round',
+                    'Draw from {C:green}deck{}',
                     '{C:inactive}({C:red}>>>{C:inactive})',
                 }
             },

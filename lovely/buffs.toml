@@ -1,0 +1,91 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 1
+
+# Buff cardarea
+[[patches]]
+[patches.pattern]
+target = 'game.lua'
+match_indent = true
+position = 'before'
+pattern = 'self.deck = CardArea('
+payload = '''
+    self.aether_buffs = CardArea(
+        G.TILE_W - G.CARD_W*2.45, 1.25*G.consumeables.T.h,
+        G.jokers.T.w / 2.5, G.jokers.T.h / 3,
+        { type = "consumeable", card_limit = 4, highlighted_limit = 1 }
+    )
+'''
+
+# Buff calculate
+[[patches]]
+[patches.pattern]
+target = '=[SMODS _ "src/utils.lua"]'
+match_indent = true
+position = 'before'
+pattern = '-- TARGET: add your own CardAreas for joker evaluation'
+payload = '''
+    local buffindex = 0
+    for k,v in ipairs(t) do
+        buffindex = buffindex + 1
+        if v == G.jokers then
+            break
+        end
+    end
+    table.insert(t, buffindex, G.aether_buffs)
+'''
+
+# Buff modify
+[[patches]]
+[patches.pattern]
+target = 'cardarea.lua'
+match_indent = true
+position = 'before'
+pattern = "--Check and see if controller is being used"
+payload = '''
+    if self == G.aether_buffs then 
+        self.states.collide.can = true
+        self.states.hover.can = true
+        self.states.click.can = true
+    end
+'''
+
+# Buff color
+[[patches]]
+[patches.pattern]
+target = 'card.lua'
+match_indent = true
+position = 'after'
+pattern = "(self.ability.set == 'Voucher' and {G.C.SECONDARY_SET.Voucher, G.C.CLEAR}) or "
+payload = "(self.ability.set == 'Buff' and {G.C.SECONDARY_SET.Buff, G.C.CLEAR}) or "
+
+# Buff booster
+
+[[patches]]
+[patches.pattern]
+target = 'functions/button_callbacks.lua'
+match_indent = true
+position = 'at'
+pattern = 'if area == G.consumeables then'
+payload = 'if area == G.consumeables or area == G.aether_buffs then'
+
+# Buff shop
+
+[[patches]]
+[patches.pattern]
+target = 'game.lua'
+match_indent = true
+position = 'after'
+pattern = "spectral_rate = 0,"
+payload = "buff_rate = 0,"
+
+G.GAME.buff_rate = 0
+
+[[patches]]
+[patches.pattern]
+target = 'functions/UI_definitions.lua'
+match_indent = true
+position = 'after'
+pattern = "{type = 'Spectral', val = G.GAME.spectral_rate},"
+payload = "{type = 'Buff', val = G.GAME.buff_rate},"
