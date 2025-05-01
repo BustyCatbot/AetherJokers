@@ -780,7 +780,7 @@ function CardArea:draw()
                 end
             end
 
-            if self.states.hover.is or G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.DRAW_TO_HAND or (#self.cards < 5 and G.STATE ~= G.STATES.BLIND_SELECT) then
+            if (self.states.hover.is or G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.DRAW_TO_HAND or (#self.cards < 5 and G.STATE ~= G.STATES.BLIND_SELECT and not G.shop_jokers)) then
                 hovered = true
             end
 
@@ -3352,7 +3352,7 @@ SMODS.Consumable {
 
         if ((card.ability.extra.context == 'score' and context.individual and context.cardarea == G.play) or (card.ability.extra.context == 'discard' and context.discard) or (card.ability.extra.context == 'held' and context.individual and context.cardarea == G.hand) or (card.ability.extra.context == 'deck' and context.individual and context.cardarea == G.deck) or (card.ability.extra.stored > 0 and context.joker_main)) and not context.end_of_round then
 
-            if (card.ability.extra.stored > 0 and context.joker_main) or (card.ability.extra.cardtype == 'rank' and card.ability.extra.card == context.other_card.config.card.value) or (card.ability.extra.cardtype == 'suit' and context.other_card:is_suit(card.ability.extra.card)) then
+            if (card.ability.extra.stored > 0 and context.joker_main) or (card.ability.extra.cardtype == 'rank' and card.ability.extra.card == context.other_card.config.card.value and context.other_card:get_id() > 0) or (card.ability.extra.cardtype == 'suit' and context.other_card:is_suit(card.ability.extra.card)) then
 
                 if not (card.ability.extra.stored > 0 and context.joker_main) then
                     card.ability.extra.triggered = card.ability.extra.triggered + 1
@@ -3360,89 +3360,102 @@ SMODS.Consumable {
 
                 if card.ability.extra.triggered >= card.ability.extra.required or (card.ability.extra.stored > 0 and context.joker_main) then
 
-                    local stored = card.ability.extra.stored
-
-                    if card.ability.extra.stored < 1 then
-                        stored = 1
-                    end
-
-                    if not (card.ability.extra.stored > 0 and context.joker_main) then
-                        card.ability.extra.triggered = 0
-                    end
-
-                    if card.ability.extra.stat == 'chips' then
-
-                        if context.discard then
-                            card.ability.extra.stored = card.ability.extra.stored + 1
-                            return {
-                                message = 'Stored +'..card.ability.extra.amount,
-                                colour = G.C.CHIPS,
-                                message_card = card,
-                                delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
-                            }
-                        else
-                            card.ability.extra.stored = 0
-                            return {
-                                chip_mod = card.ability.extra.amount * stored,
-                                message = localize { type = 'variable', key = 'a_chips', vars = { card.ability.extra.amount * stored } },
-                                colour = G.C.CHIPS,
-                                message_card = card,
-                                delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
-                            }
-                        end
-
-                    elseif card.ability.extra.stat == 'mult' then
-
-                        if context.discard then
-                            card.ability.extra.stored = card.ability.extra.stored + 1
-                            return {
-                                message = 'Stored +'..card.ability.extra.amount,
-                                colour = G.C.MULT,
-                                message_card = card,
-                                delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
-                            }
-                        else
-                            card.ability.extra.stored = 0
-                            return {
-                                mult_mod = card.ability.extra.amount * stored,
-                                message = localize { type = 'variable', key = 'a_mult', vars = { card.ability.extra.amount * stored } },
-                                colour = G.C.MULT,
-                                message_card = card,
-                                delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
-                            }
-                        end
-
-                    elseif card.ability.extra.stat == 'xmult' then
-
-                        if context.discard then
-                            card.ability.extra.stored = card.ability.extra.stored + 1
-                            return {
-                                message = 'Stored X'..(1 + card.ability.extra.amount),
-                                colour = G.C.MULT,
-                                message_card = card,
-                                delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
-                            }
-                        else
-                            card.ability.extra.stored = 0
-                            return {
-                                Xmult_mod = 1 + card.ability.extra.amount ^ stored,
-                                message = localize { type = 'variable', key = 'a_xmult', vars = { 1 + card.ability.extra.amount ^ stored } },
-                                colour = G.C.MULT,
-                                message_card = card,
-                                delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
-                            }
-                        end
-
-                    elseif card.ability.extra.stat == 'dollars' then
+                    if card.debuff then
 
                         return {
-                            dollars = card.ability.extra.amount,
-                            message = '$'..card.ability.extra.amount,
-                            colour = G.C.MONEY,
+                            message = localize('k_debuffed'),
+                            colour = G.C.RED,
                             message_card = card,
-                            remove_default_message = true,
                             delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
                         }
+
+                    else
+
+                        local stored = card.ability.extra.stored
+
+                        if card.ability.extra.stored < 1 then
+                            stored = 1
+                        end
+
+                        if not (card.ability.extra.stored > 0 and context.joker_main) then
+                            card.ability.extra.triggered = 0
+                        end
+
+                        if card.ability.extra.stat == 'chips' then
+
+                            if context.discard then
+                                card.ability.extra.stored = card.ability.extra.stored + 1
+                                return {
+                                    message = 'Stored +'..card.ability.extra.amount,
+                                    colour = G.C.CHIPS,
+                                    message_card = card,
+                                    delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
+                                }
+                            else
+                                card.ability.extra.stored = 0
+                                return {
+                                    chip_mod = card.ability.extra.amount * stored,
+                                    message = localize { type = 'variable', key = 'a_chips', vars = { card.ability.extra.amount * stored } },
+                                    colour = G.C.CHIPS,
+                                    message_card = card,
+                                    delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
+                                }
+                            end
+
+                        elseif card.ability.extra.stat == 'mult' then
+
+                            if context.discard then
+                                card.ability.extra.stored = card.ability.extra.stored + 1
+                                return {
+                                    message = 'Stored +'..card.ability.extra.amount,
+                                    colour = G.C.MULT,
+                                    message_card = card,
+                                    delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
+                                }
+                            else
+                                card.ability.extra.stored = 0
+                                return {
+                                    mult_mod = card.ability.extra.amount * stored,
+                                    message = localize { type = 'variable', key = 'a_mult', vars = { card.ability.extra.amount * stored } },
+                                    colour = G.C.MULT,
+                                    message_card = card,
+                                    delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
+                                }
+                            end
+
+                        elseif card.ability.extra.stat == 'xmult' then
+
+                            if context.discard then
+                                card.ability.extra.stored = card.ability.extra.stored + 1
+                                return {
+                                    message = 'Stored X'..(1 + card.ability.extra.amount),
+                                    colour = G.C.MULT,
+                                    message_card = card,
+                                    delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
+                                }
+                            else
+                                card.ability.extra.stored = 0
+                                return {
+                                    Xmult_mod = 1 + card.ability.extra.amount ^ stored,
+                                    message = localize { type = 'variable', key = 'a_xmult', vars = { 1 + card.ability.extra.amount ^ stored } },
+                                    colour = G.C.MULT,
+                                    message_card = card,
+                                    delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
+                                }
+                            end
+
+                        elseif card.ability.extra.stat == 'dollars' then
+
+                            return {
+                                dollars = card.ability.extra.amount,
+                                message = '$'..card.ability.extra.amount,
+                                colour = G.C.MONEY,
+                                message_card = card,
+                                remove_default_message = true,
+                                delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
+                            }
+
+                        end
 
                     end
 
@@ -3592,10 +3605,10 @@ SMODS.Consumable {
 
             if card.ability.extra.stat == 'xmult' then
                 card.ability.extra.amount = math.ceil((statvalues[card.ability.extra.stat] * amountmodifier) * 20) / 20
-                card.ability.extra.required = math.ceil(2 * (1 + card.ability.extra.amount * amountmodifier) / math.max(card.ability.extra.rarity * 2/3, 1))
+                card.ability.extra.required = math.ceil((1 + statvalues[card.ability.extra.stat] * amountmodifier) / math.max(card.ability.extra.rarity * 2/3, 1))
             elseif (statvalues[card.ability.extra.stat] * amountmodifier) < 1 then
                 card.ability.extra.amount = 1
-                card.ability.extra.required = math.ceil((1 / card.ability.extra.amount * amountmodifier) / math.max(card.ability.extra.rarity * 2/3, 1))
+                card.ability.extra.required = math.ceil((1 / statvalues[card.ability.extra.stat] * amountmodifier) / math.max(card.ability.extra.rarity * 2/3, 1))
             else
                 card.ability.extra.amount = math.ceil(statvalues[card.ability.extra.stat] * amountmodifier)
                 card.ability.extra.required = 1
@@ -3680,7 +3693,7 @@ SMODS.Consumable {
                 if checkarea ~= {} then
                     for k,v in pairs(checkarea) do
                         if card.ability.extra.cardtype == 'rank' then
-                            if v:get_id() == card.ability.extra.card and not v.debuff and not v.highlighted then
+                            if v.config.card.value == card.ability.extra.card and not v.debuff and not v.highlighted then
                                 card.ability.extra.tally = card.ability.extra.tally + 1
                             end
                         else
