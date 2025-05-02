@@ -3681,35 +3681,35 @@ SMODS.Consumable {
 
             else
 
-                card.ability.extra.tally = 0
-                local checkarea = {}
-
-                if card.ability.extra.context == 'held' and G.hand then
-                    checkarea = G.hand.cards
-                elseif G.deck then
-                    checkarea = G.deck.cards
-                end
-
-                if checkarea ~= {} then
-                    for k,v in pairs(checkarea) do
-                        if card.ability.extra.cardtype == 'rank' then
-                            if v.config.card.value == card.ability.extra.card and not v.debuff and not v.highlighted then
-                                card.ability.extra.tally = card.ability.extra.tally + 1
-                            end
-                        else
-                            if v:is_suit(card.ability.extra.card) and not v.debuff and not v.highlighted then
-                                card.ability.extra.tally = card.ability.extra.tally + 1
-                            end
-                        end
-                    end
-                end
-
                 card.ability.extra.text1 = ''
                 card.ability.extra.cardtext1 = ''
                 card.ability.extra.text2 = ''
                 card.ability.extra.text3 = ' for each '
                 card.ability.extra.cardtext2 = card.ability.extra.cardtext
 
+            end
+        end
+
+        card.ability.extra.tally = 0
+        local checkarea
+
+        if card.ability.extra.context == 'held' then
+            checkarea = G.hand
+        elseif card.ability.extra.context == 'deck' then
+            checkarea = G.deck
+        end
+
+        if checkarea then
+            for k,v in pairs(checkarea.cards) do
+                if card.ability.extra.cardtype == 'rank' then
+                    if v.config.card.value == card.ability.extra.card and not v.debuff and not v.highlighted then
+                        card.ability.extra.tally = card.ability.extra.tally + 1
+                    end
+                else
+                    if v:is_suit(card.ability.extra.card) and not v.debuff and not v.highlighted then
+                        card.ability.extra.tally = card.ability.extra.tally + 1
+                    end
+                end
             end
         end
 
@@ -3740,7 +3740,7 @@ SMODS.Consumable {
         return config.buffcards, { allow_duplicates = true }
     end,
     can_use = function(self, card)
-        if (card.area ~= G.aether_buffs and #G.aether_buffs < G.aether_buffs.config.card_limit) or card.area == G.aether_buffs then
+        if (card.area ~= G.aether_buffs and #G.aether_buffs.cards < G.aether_buffs.config.card_limit) or card.area == G.aether_buffs then
             return true
         end
     end,
