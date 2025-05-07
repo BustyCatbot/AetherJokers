@@ -50,6 +50,16 @@ for i = 1, #aether_jokers do
 
 end
 
+if config.enhancements then
+    SMODS.Atlas {
+        key = 'centers',
+        path = 'BaseEnhancers.png',
+        px = 71,
+        py = 95,
+        raw_key = true
+    }
+end
+
 SMODS.Atlas {
 	key = 'aetherjokers',
 	path = 'AetherJokers.png',
@@ -938,7 +948,7 @@ G.C.AETHERDIAMONDS = HEX('D66B1B')
 SMODS.DeckSkin {
     key = 'aetherspades',
     suit = 'Spades',
-    loc_text = 'Aether Spades',
+    loc_txt = 'Aether Spades',
     palettes = {
         {
             key = 'lc',
@@ -962,7 +972,7 @@ SMODS.DeckSkin {
 SMODS.DeckSkin {
     key = 'aetherhearts',
     suit = 'Hearts',
-    loc_text = 'Aether Hearts',
+    loc_txt = 'Aether Hearts',
     palettes = {
         {
             key = 'lc',
@@ -986,7 +996,7 @@ SMODS.DeckSkin {
 SMODS.DeckSkin {
     key = 'aetherclubs',
     suit = 'Clubs',
-    loc_text = 'Aether Clubs',
+    loc_txt = 'Aether Clubs',
     palettes = {
         {
             key = 'lc',
@@ -1010,7 +1020,7 @@ SMODS.DeckSkin {
 SMODS.DeckSkin {
     key = 'aetherdiamonds',
     suit = 'Diamonds',
-    loc_text = 'Aether Diamonds',
+    loc_txt = 'Aether Diamonds',
     palettes = {
         {
             key = 'lc',
@@ -4133,6 +4143,23 @@ SMODS.current_mod.config_tab = function()
                                         label = 'Custom Music',
                                         ref_table = config,
                                         ref_value = 'music'
+                                    })
+                                }
+                            },
+                        }
+                    },
+                    {
+                        n = G.UIT.C,
+                        config = { align = "cm" },
+                        nodes = {
+                            {
+                                n = G.UIT.R,
+                                config = { align = "cm", padding = 0.01 },
+                                nodes = {
+                                    create_toggle({
+                                        label = 'Enhancements Skin',
+                                        ref_table = config,
+                                        ref_value = 'enhancements'
                                     })
                                 }
                             },
