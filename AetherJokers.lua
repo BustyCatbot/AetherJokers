@@ -587,9 +587,9 @@ local base_calculate = Card.calculate_joker
 function Card:calculate_joker(context)
     local ret = base_calculate(self, context)
 
-    if context.other_card then
+    if context.other_card and not context.check_enhancement then
 
-        if SMODS.has_enhancement(context.other_card, 'm_aether_counterfeit') and context.other_card.ability.extra.uses_left <= 0 and context.other_card ~= self and not context.check_enhancement then
+        if SMODS.has_enhancement(context.other_card, 'm_aether_counterfeit') and context.other_card.ability.extra.uses_left <= 0 and context.other_card ~= self then
 
             return nil
 
