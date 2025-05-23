@@ -10,6 +10,10 @@
 local config = SMODS.current_mod.config
 SMODS.optional_features.cardareas.deck = true
 
+local function lerp( targetvalue, currentvalue, fraction )
+    return currentvalue + (targetvalue - currentvalue) * fraction
+end
+
 aether_jokers = {
     [1] = {
         'drugtest',
@@ -96,6 +100,13 @@ SMODS.Atlas {
 }
 
 SMODS.Atlas {
+	key = 'aetherbuffs',
+	path = 'AetherBuffs.png',
+	px = 71,
+	py = 95
+}
+
+SMODS.Atlas {
 	key = 'aethersuitslc',
 	path = 'AetherSuitsLC.png',
 	px = 71,
@@ -105,6 +116,13 @@ SMODS.Atlas {
 SMODS.Atlas {
 	key = 'aethersuitshc',
 	path = 'AetherSuitsHC.png',
+	px = 71,
+	py = 95
+}
+
+SMODS.Atlas {
+	key = 'aetheroutlines',
+	path = 'AetherOutlines.png',
 	px = 71,
 	py = 95
 }
@@ -251,25 +269,12 @@ SMODS.Sound({
     end
 })
 
-SMODS.Sound({
-    key = 'joker1',
-    path = 'joker1.ogg',
-})
-
-SMODS.Sound({
-    key = 'joker2',
-    path = 'joker2.ogg',
-})
-
-SMODS.Sound({
-    key = 'joker3',
-    path = 'joker3.ogg',
-})
-
-SMODS.Sound({
-    key = 'joker4',
-    path = 'joker4.ogg',
-})
+for i = 1, 4 do
+    SMODS.Sound({
+        key = 'joker'..i,
+        path = 'joker'..i..'.ogg',
+    })
+end
 
 SMODS.Sound({
     key = 'tennisstart',
@@ -391,75 +396,64 @@ SMODS.Sound({
     path = 'fleshxmult.ogg',
 })
 
-SMODS.Sound({
-    key = 'fleshinfect1',
-    path = 'fleshinfect1.ogg',
-})
+for i = 1, 4 do
+    SMODS.Sound({
+        key = 'fleshinfect'..i,
+        path = 'fleshinfect'..i..'.ogg',
+    })
+end
 
-SMODS.Sound({
-    key = 'fleshinfect2',
-    path = 'fleshinfect2.ogg',
-})
+for i = 1, 2 do
+    SMODS.Sound({
+        key = 'fleshinfectjoker'..i,
+        path = 'fleshinfectjoker'..i..'.ogg',
+    })
+end
 
-SMODS.Sound({
-    key = 'fleshinfect3',
-    path = 'fleshinfect3.ogg',
-})
+for i = 1, 6 do
+    SMODS.Sound({
+        key = 'fleshdecay'..i,
+        path = 'fleshdecay'..i..'.ogg',
+    })
+end
 
-SMODS.Sound({
-    key = 'fleshinfect4',
-    path = 'fleshinfect4.ogg',
-})
+for i = 1, 2 do
+    SMODS.Sound({
+        key = 'fleshperish'..i,
+        path = 'fleshperish'..i..'.ogg',
+    })
+end
 
-SMODS.Sound({
-    key = 'fleshinfectjoker1',
-    path = 'fleshinfectjoker1.ogg',
-})
+local soundparts = {
+    contexts = {
+        'score',
+        'discard',
+        'held',
+        'deck',
+        'tick'
+    },
+    stats = {
+        'chips',
+        'mult',
+        'xmult',
+        'dollars',
+        'repetitions',
+        'level'
+    }
+}
 
-SMODS.Sound({
-    key = 'fleshinfectjoker2',
-    path = 'fleshinfectjoker2.ogg',
-})
+for k1,v1 in pairs(soundparts.contexts) do
 
-SMODS.Sound({
-    key = 'fleshdecay1',
-    path = 'fleshdecay1.ogg',
-})
+    for k2,v2 in pairs(soundparts.stats) do
 
-SMODS.Sound({
-    key = 'fleshdecay2',
-    path = 'fleshdecay2.ogg',
-})
+        SMODS.Sound({
+            key = 'buff'..v1..v2,
+            path = 'buff'..v1..v2..'.ogg',
+        })
 
-SMODS.Sound({
-    key = 'fleshdecay3',
-    path = 'fleshdecay3.ogg',
-})
+    end
 
-SMODS.Sound({
-    key = 'fleshdecay4',
-    path = 'fleshdecay4.ogg',
-})
-
-SMODS.Sound({
-    key = 'fleshdecay5',
-    path = 'fleshdecay5.ogg',
-})
-
-SMODS.Sound({
-    key = 'fleshdecay6',
-    path = 'fleshdecay6.ogg',
-})
-
-SMODS.Sound({
-    key = 'fleshperish1',
-    path = 'fleshperish1.ogg',
-})
-
-SMODS.Sound({
-    key = 'fleshperish2',
-    path = 'fleshperish2.ogg',
-})
+end
 
 SMODS.Sound({
     key = 'invertedcard1',
@@ -532,6 +526,23 @@ function loc_colour(_c, _default)
     G.ARGS.LOC_COLOURS['aetherclubs'] = G.C.AETHERCLUBS
 
     G.ARGS.LOC_COLOURS['aetherdiamonds'] = G.C.AETHERDIAMONDS
+
+    return ret
+end
+
+local base_game_update = Game.update
+function Game:update(dt)
+    local ret = base_game_update(self, dt)
+
+        if next(SMODS.find_card('j_smeared')) and not self.Smeared then
+
+            self.Smeared = true
+
+        elseif not next(SMODS.find_card('j_smeared')) and self.Smeared then
+
+            self.Smeared = false
+
+        end
 
     return ret
 end
@@ -812,9 +823,9 @@ function CardArea:draw()
                 desiredx = G.TILE_W
             end
 
-            self.T.w = self.T.w + (desiredw - self.T.w) * fraction
-            self.T.x = self.T.x + (desiredx - self.T.x) * fraction
-            self.T.y = self.T.y + (desiredy - self.T.y) * fraction / 2
+            self.T.w = lerp( desiredw, self.T.w, fraction )
+            self.T.x = lerp( desiredx, self.T.x, fraction )
+            self.T.y = lerp( desiredy, self.T.y, fraction / 2 )
 
         end
 
@@ -826,7 +837,8 @@ local base_main_menu = Game.main_menu
 Game.main_menu = function(change_context)
     local ret = base_main_menu(change_context)
 
-    G.buffsprite = Sprite(0,0,G.CARD_W,G.CARD_H,G.ASSET_ATLAS['aether_aetherconsumeables'], { x = 4, y = 0 })
+    G.buffsprite = Sprite(0,0,G.CARD_W,G.CARD_H,G.ASSET_ATLAS['aether_aetherbuffs'], { x = 4, y = 0 })
+    G.outlinesprite = Sprite(0,0,G.CARD_W,G.CARD_H,G.ASSET_ATLAS['aether_aetheroutlines'], { x = 0, y = 0 })
 
     return ret
 end
@@ -940,6 +952,33 @@ function Card:sparkle(settings, juice, silent, sound)
 
 end
 
+function Card:outline(settings, silent, sound)
+
+    if not self.outlines then
+        self.outlines = {}
+    end
+
+    self.outlines[#self.outlines + 1] = {
+        color = settings.color,
+        size = settings.size,
+        rotation = settings.rotation / 360,
+        time = settings.time,
+        gamespeed = settings.gamespeed,
+        progress = 0
+    }
+
+    if not silent then 
+        G.E_MANAGER:add_event(Event({
+            blockable = false,
+            func = function()
+                play_sound(sound, 1, 0.75)
+                return true
+            end
+        }))
+    end
+
+end
+
 G.C.AETHERSPADES = HEX('5E579C')
 G.C.AETHERHEARTS = HEX('EC2D33')
 G.C.AETHERCLUBS = HEX('217C75')
@@ -1042,6 +1081,73 @@ SMODS.DeckSkin {
 }
 
 SMODS.DrawStep {
+    key = 'aetheroutlines',
+    order = 5,
+    func = function(self)
+        if not G.outlinesprite then return nil end
+
+        local color = {
+            ['white'] = { x = 0, y = 0 },
+            ['filter'] = { x = 1, y = 0 },
+            ['green'] = { x = 2, y = 0 },
+            ['uncommon'] = { x = 2, y = 0 },
+            ['red'] = { x = 3, y = 0 },
+            ['mult'] = { x = 3, y = 0 },
+            ['rare'] = { x = 3, y = 0 },
+            ['blue'] = { x = 4, y = 0 },
+            ['chips'] = { x = 4, y = 0 },
+            ['common'] = { x = 4, y = 0 },
+            ['money'] = { x = 0, y = 1 },
+            ['tarot'] = { x = 1, y = 1 },
+            ['planet'] = { x = 2, y = 1 },
+            ['spectral'] = { x = 3, y = 1 },
+            ['legendary'] = { x = 4, y = 1 },
+            ['aether'] = { x = 0, y = 2 },
+            ['flush'] = { x = 1, y = 2 },
+            ['consume'] = { x = 2, y = 2 },
+            ['sleeved'] = { x = 3, y = 2 },
+            ['counterfeit'] = { x = 4, y = 2 },
+            ['buff'] = { x = 0, y = 3 },
+        }
+
+        if self.outlines then
+
+            for k,v in pairs(self.outlines) do
+
+                G.outlinesprite.role.draw_major = self
+
+                G.outlinesprite:set_sprite_pos(color[v.color])
+
+                if v.gamespeed then
+                    v.progress = lerp( 1, v.progress, (G.real_dt * G.SPEEDFACTOR) / v.time )
+                else
+                    v.progress = lerp( 1, v.progress, G.real_dt / v.time )
+                end
+
+                if v.progress > 0.95 and not v.fade then
+                    v.fade = true
+                    G.E_MANAGER:add_event(Event({
+                        trigger = 'after',
+                        blockable = false,
+                        delay =  0.25,
+                        func = (function() self.outlines[k] = nil return true end)
+                    }))
+                end
+
+                if v.fade then
+                    G.outlinesprite:draw_shader('voucher', nil, nil, nil, self.children.center, v.size * v.progress, v.rotation * v.progress)
+                end
+
+                G.outlinesprite:draw_shader('dissolve', nil, nil, nil, self.children.center, v.size * v.progress, v.rotation * v.progress)
+
+            end
+
+        end
+    end,
+    conditions = { vortex = false }
+}
+
+SMODS.DrawStep {
     key = 'buffrarity',
     order = 2,
     func = function(self)
@@ -1053,10 +1159,10 @@ SMODS.DrawStep {
             if self.ability.extra.cardtype ~= '' then
 
                 local rarity = {
-                    [1] = { x = 4, y = 0 },
-                    [2] = { x = 0, y = 1 },
-                    [3] = { x = 1, y = 1 },
-                    [4] = { x = 2, y = 1 },
+                    [1] = { x = 1, y = 1 },
+                    [2] = { x = 2, y = 1 },
+                    [3] = { x = 3, y = 1 },
+                    [4] = { x = 4, y = 1 },
                 }
                 
                 G.buffsprite:set_sprite_pos(rarity[self.ability.extra.rarity])
@@ -1087,6 +1193,8 @@ SMODS.DrawStep {
                     ['mult'] = { x = 1, y = 0 },
                     ['xmult'] = { x = 2, y = 0 },
                     ['dollars'] = { x = 3, y = 0 },
+                    ['repetitions'] = { x = 4, y = 0 },
+                    ['level'] = { x = 0, y = 1 },
                 }
                 
                 G.buffsprite:set_sprite_pos(stat[self.ability.extra.stat])
@@ -1113,25 +1221,30 @@ SMODS.DrawStep {
 
                 local cardtype = {
                     ['suit'] = {
-                        ['Spades'] = { x = 2, y = 2 },
-                        ['Hearts'] = { x = 3, y = 2 },
-                        ['Clubs'] = { x = 4, y = 2 },
-                        ['Diamonds'] = { x = 0, y = 3 },
+                        ['Lights'] = { x = 4, y = 2 },
+                        ['Darks'] = { x = 0, y = 3 },
+                        ['Spades'] = { x = 1, y = 3 },
+                        ['Hearts'] = { x = 2, y = 3 },
+                        ['Clubs'] = { x = 3, y = 3 },
+                        ['Diamonds'] = { x = 4, y = 3 },
                     },
                     ['rank'] = {
-                        ['2'] = { x = 1, y = 3 },
-                        ['3'] = { x = 2, y = 3 },
-                        ['4'] = { x = 3, y = 3 },
-                        ['5'] = { x = 4, y = 3 },
-                        ['6'] = { x = 0, y = 4 },
-                        ['7'] = { x = 1, y = 4 },
-                        ['8'] = { x = 2, y = 4 },
-                        ['9'] = { x = 3, y = 4 },
-                        ['10'] = { x = 4, y = 4 },
-                        ['Jack'] = { x = 0, y = 5 },
-                        ['Queen'] = { x = 1, y = 5 },
-                        ['King'] = { x = 2, y = 5 },
-                        ['Ace'] = { x = 3, y = 5 },
+                        ['Even'] = { x = 0, y = 4 },
+                        ['Odd'] = { x = 1, y = 4 },
+                        ['2'] = { x = 2, y = 4 },
+                        ['3'] = { x = 3, y = 4 },
+                        ['4'] = { x = 4, y = 4 },
+                        ['5'] = { x = 0, y = 5 },
+                        ['6'] = { x = 1, y = 5 },
+                        ['7'] = { x = 2, y = 5 },
+                        ['8'] = { x = 3, y = 5 },
+                        ['9'] = { x = 4, y = 5 },
+                        ['10'] = { x = 0, y = 6 },
+                        ['Face'] = { x = 1, y = 6 },
+                        ['Jack'] = { x = 2, y = 6 },
+                        ['Queen'] = { x = 3, y = 6 },
+                        ['King'] = { x = 4, y = 6 },
+                        ['Ace'] = { x = 0, y = 7 },
                     },
                 }
                 
@@ -1158,10 +1271,10 @@ SMODS.DrawStep {
             if self.ability.extra.cardtype ~= '' then
 
                 local context = {
-                    ['score'] = { x = 3, y = 1 },
-                    ['discard'] = { x = 4, y = 1 },
-                    ['held'] = { x = 0, y = 2 },
-                    ['deck'] = { x = 1, y = 2 },
+                    ['score'] = { x = 0, y = 2 },
+                    ['discard'] = { x = 1, y = 2 },
+                    ['held'] = { x = 2, y = 2 },
+                    ['deck'] = { x = 3, y = 2 },
                 }
                 
                 G.buffsprite:set_sprite_pos(context[self.ability.extra.context])
@@ -1370,7 +1483,7 @@ SMODS.Joker {
     perishable_compat = true,
 	calculate = function(self, card, context)
 
-        if (context.pre_discard and G.GAME.current_round.discards_left == 1 and not context.hook) or (context.final_scoring_step and G.GAME.current_round.hands_left == 1 and pseudorandom('hailmaryhand') < G.GAME.probabilities.normal / card.ability.extra.hand_odds) then
+        if (context.pre_discard and G.GAME.current_round.discards_left == 1 and not context.hook and not G.GAME.inverted) or (context.final_scoring_step and G.GAME.current_round.hands_left == 1 and pseudorandom('hailmaryhand') < G.GAME.probabilities.normal / card.ability.extra.hand_odds) then
 
             if #G.hand.cards >= 1 then
 
@@ -1484,7 +1597,7 @@ SMODS.Joker {
     perishable_compat = true,
 	calculate = function(self, card, context)
 
-        if (context.pre_discard and G.GAME.current_round.discards_left == 1) or (context.final_scoring_step and G.GAME.current_round.hands_left == 1 and pseudorandom('eleventhhand') < G.GAME.probabilities.normal / card.ability.extra.hand_odds) then
+        if (context.pre_discard and G.GAME.current_round.discards_left == 1 and not G.GAME.inverted) or (context.final_scoring_step and G.GAME.current_round.hands_left == 1 and pseudorandom('eleventhhand') < G.GAME.probabilities.normal / card.ability.extra.hand_odds) then
 
             if #G.hand.cards >= 1 then
 
@@ -2461,7 +2574,6 @@ SMODS.Joker {
 
             G.E_MANAGER:add_event(Event({
                 func = function()
-                    card:juice_up(0.3,0.5)
                     attention_text({
                         scale = 1.4, text = 'Flushify!', hold = 2, align = 'cm', offset = {x = 0,y = -2.7},major = G.play
                     })
@@ -2469,6 +2581,15 @@ SMODS.Joker {
                     ease_colour(G.C.UI_MULT, G.C.FLUSH, 0.5)
                     play_sound('tarot1', 1.5)
                     play_sound('aether_flushify')
+
+                    card:outline({
+                        color = 'flush',
+                        size = 20,
+                        rotation = 0,
+                        time = 2,
+                        gamespeed = true,
+                    }, true, '')
+                    
                     return true
                 end,
             }))
@@ -2558,6 +2679,13 @@ SMODS.Joker {
                             v:flip()
                             v:start_materialize({G.C.FLUSH}, true, 1)
                             play_sound('aether_flushify'..flushified_card)
+                            v:outline({
+                                color = 'flush',
+                                size = 0.5,
+                                rotation = math.random(-15, 15),
+                                time = 0.5,
+                                gamespeed = true,
+                            }, true, '')
                             flushified_card = flushified_card + 1
                             return true
                         end,
@@ -2692,6 +2820,29 @@ SMODS.Joker {
     end
 }
 
+local function infectcard(card, targetcard)
+    if targetcard then
+        if not SMODS.has_enhancement(targetcard, 'm_aether_flesh') and not SMODS.has_enhancement(targetcard, 'm_aether_fleshstone') and not SMODS.has_enhancement(targetcard, 'm_aether_sleeved') then
+
+            if SMODS.has_enhancement(targetcard, 'm_stone') then
+                targetcard:set_ability(G.P_CENTERS.m_aether_fleshstone, nil, true)
+            else
+                targetcard:set_ability(G.P_CENTERS.m_aether_flesh, nil, true)
+            end
+            card_eval_status_text(targetcard, 'extra', nil, nil, nil, {message = 'INFECT', sound = 'aether_fleshinfect'..math.random(1, 4), colour = G.C.FLESH})
+            G.E_MANAGER:add_event(Event({
+                func = function()
+                    targetcard:juice_up(0.3,0.5)
+                    card:juice_up(0.3,0.5)
+                    targetcard:start_materialize({G.C.FLESH}, true, 1)
+                    return true
+                end,
+            }))
+
+        end
+    end
+end
+
 SMODS.Joker {
 	key = 'fleshjoker',
 	config = { extra = { infect_odds = 10, infected_cards = 0, total_cards = 52, infected_jokers = 0, total_jokers = 1, card_mult = 0.1, joker_mult = 0.5 } },
@@ -2732,24 +2883,7 @@ SMODS.Joker {
 
             for k,v in pairs(G.play.cards) do
 
-                if not SMODS.has_enhancement(v, 'm_aether_flesh') and not SMODS.has_enhancement(v, 'm_aether_fleshstone') and not SMODS.has_enhancement(v, 'm_aether_sleeved') then
-
-                    if SMODS.has_enhancement(v, 'm_stone') then
-                        v:set_ability(G.P_CENTERS.m_aether_fleshstone, nil, true)
-                    else
-                        v:set_ability(G.P_CENTERS.m_aether_flesh, nil, true)
-                    end
-                    card_eval_status_text(v, 'extra', nil, nil, nil, {message = 'INFECT', sound = 'aether_fleshinfect'..math.random(1, 4), colour = G.C.FLESH})
-                    G.E_MANAGER:add_event(Event({
-                        func = function()
-                            v:juice_up(0.3,0.5)
-                            v:start_materialize({G.C.FLESH}, true, 1)
-                            return true
-                        end,
-                    }))
-                    delay(0.1)
-
-                end
+                infectcard(card, v)
 
             end
 
@@ -2852,7 +2986,8 @@ SMODS.Enhancement {
 	},
     atlas = 'aetherenhancers',
 	pos = { x = 1, y = 0 },
-    config = { block_enhance = true, extra = {triggers = 0} },
+    config = { extra = {triggers = 0} },
+    block_enhance = true,
     no_collection = config.joker.sleevedjoker.disabled,
     weight = 0,
     in_pool = function(self)
@@ -3001,8 +3136,8 @@ SMODS.Enhancement {
 		name = 'Flesh Card',
 		text = {
             '{C:mult}+#1#{} Mult',
-			'{C:green}#2# in #3#{} chance to {X:flesh,C:white}SPREAD{} to each',
-            'card held in hand at end of round',
+			'{C:green}#2# in #3#{} chance to {X:flesh,C:white}SPREAD{} to',
+            'adjacent cards at end of round',
             '{C:green}#2# in #4#{} chance to {X:flesh,C:white}DECAY{} when',
             '{C:blue}played{}, {C:red}discarded{}, or at {C:attention}end of round{},',
             '{X:flesh,C:white}PERISHES{} if {C:attention}2',
@@ -3035,27 +3170,39 @@ SMODS.Enhancement {
 
         if context.end_of_round and ((context.cardarea == G.hand and #G.hand.cards > 0) or context.cardarea == G.deck) then
 
-            for k,v in pairs(G.hand.cards) do
+            local selfpos = 0
+            local targetcard = {}
 
-                if pseudorandom('fleshinfect') < G.GAME.probabilities.normal / card.ability.extra.infect_odds and not SMODS.has_enhancement(v, 'm_aether_flesh') and not SMODS.has_enhancement(v, 'm_aether_fleshstone') and not SMODS.has_enhancement(v, 'm_aether_sleeved') then
+            if context.cardarea == G.hand and #G.hand.cards > 0 then
 
-                    if SMODS.has_enhancement(v, 'm_stone') then
-                        v:set_ability(G.P_CENTERS.m_aether_fleshstone, nil, true)
-                    else
-                        v:set_ability(G.P_CENTERS.m_aether_flesh, nil, true)
+                for i = 1, #G.hand.cards do
+                    if G.hand.cards[i] == card then
+                        selfpos = i
+                        break
                     end
-                    card_eval_status_text(v, 'extra', nil, nil, nil, {message = 'INFECT', sound = 'aether_fleshinfect'..math.random(1, 4), colour = G.C.FLESH})
-                    G.E_MANAGER:add_event(Event({
-                        func = function()
-                            v:juice_up(0.3,0.5)
-                            card:juice_up(0.3,0.5)
-                            v:start_materialize({G.C.FLESH}, true, 1)
-                            return true
-                        end,
-                    }))
-
                 end
 
+                for i = 1, 1 do
+
+                    if selfpos > 0 and pseudorandom('fleshinfect') < G.GAME.probabilities.normal / card.ability.extra.infect_odds then
+                        infectcard(card, G.hand.cards[selfpos - 1])
+                        break
+                    end
+
+                    if selfpos < #G.hand.cards and pseudorandom('fleshinfect') < G.GAME.probabilities.normal / card.ability.extra.infect_odds then
+                        infectcard(card, G.hand.cards[selfpos + 1])
+                        break
+                    end
+
+                end
+            
+            elseif context.cardarea == G.deck then
+                for k,v in pairs(G.deck.cards) do
+                    if (v:get_id() == card:get_id() or v:is_suit(card.base.suit) or SMODS.has_enhancement(v, 'm_stone')) and pseudorandom('fleshinfect') < G.GAME.probabilities.normal / card.ability.extra.infect_odds * 8 then
+                        infectcard(card, v)
+                        break
+                    end
+                end
             end
 
         end
@@ -3203,7 +3350,7 @@ SMODS.Enhancement {
 
         end
 
-        if context.destroy_card and context.cardarea ~= G.hand and not context.repetition then
+        if context.destroy_card and context.cardarea == G.play and not context.repetition then
 
             for k,v in pairs(G.play.cards) do
 
@@ -3292,10 +3439,25 @@ SMODS.ConsumableType {
     }
 }
 
+G.C.SUITS.Lights = HEX('f97853')
+G.C.SUITS.Darks = HEX('5f88a9')
+
+local function checkbuffviability(card, target)
+
+    return (card.ability.extra.card == 'Even' and target:get_id() and target:get_id() < 11 and target:get_id()%2 == 0)
+    or (card.ability.extra.card == 'Odd' and target:get_id() > 0 and ((target:get_id() < 11 and target:get_id()%2 == 1) or (target:get_id() == 14)))
+    or (card.ability.extra.card == 'Face' and target:get_id() > 0 and target:is_face())
+    or (card.ability.extra.cardtype == 'rank' and card.ability.extra.card == target.config.card.value and target:get_id() > 0)
+    or (card.ability.extra.card == 'Lights' and (target:is_suit('Hearts') or target:is_suit('Diamonds')))
+    or (card.ability.extra.card == 'Darks' and (target:is_suit('Spades') or target:is_suit('Clubs')))
+    or (card.ability.extra.cardtype == 'suit' and target:is_suit(card.ability.extra.card))
+
+end
+
 SMODS.Consumable {
     key = 'buffcard',
     set = 'Buff',
-    atlas = 'aetherconsumeables',
+    atlas = 'aetherbuffs',
     pos = { x = 3, y = 5 },
     loc_txt = {
         name = 'Buff Card',
@@ -3304,6 +3466,9 @@ SMODS.Consumable {
         }
     },
     loc_vars = function(self, info_queue, card)
+        if card.ability.extra.context == 'discard' and card.ability.extra.stat ~= 'dollars' then
+            info_queue[#info_queue+1] = {key = 'buffdiscard', set = 'Aether'}
+        end
 		return { 
             vars = { 
                 card.ability.extra.text1,
@@ -3326,6 +3491,9 @@ SMODS.Consumable {
 	end,
     no_collection = not config.buffcards,
     config = { extra = {
+
+        update = true,
+
         rarity = 0,
         raritytext = '',
 
@@ -3355,14 +3523,15 @@ SMODS.Consumable {
         text3 = '',
 
         triggerdelay = 0.5,
+
     } },
     unlocked = true,
     discovered = true,
     calculate = function(self, card, context)
 
-        if ((card.ability.extra.context == 'score' and context.individual and context.cardarea == G.play) or (card.ability.extra.context == 'discard' and context.discard) or (card.ability.extra.context == 'held' and context.individual and context.cardarea == G.hand) or (card.ability.extra.context == 'deck' and context.individual and context.cardarea == G.deck) or (card.ability.extra.stored > 0 and context.joker_main)) and not context.end_of_round then
+        if ((card.ability.extra.context == 'score' and context.individual and context.cardarea == G.play) or (card.ability.extra.context == 'discard' and context.discard) or (card.ability.extra.context == 'held' and context.individual and context.cardarea == G.hand) or (card.ability.extra.context == 'deck' and context.individual and context.cardarea == G.deck) or (card.ability.extra.stored > 0 and context.joker_main) or (card.ability.extra.stat == 'repetitions' and context.repetition and not context.repetition_only and (context.cardarea == G.play or context.cardarea == G.hand or context.cardarea == G.deck) and context.other_card ~= card)) and not context.end_of_round then
 
-            if (card.ability.extra.stored > 0 and context.joker_main) or (card.ability.extra.cardtype == 'rank' and card.ability.extra.card == context.other_card.config.card.value and context.other_card:get_id() > 0) or (card.ability.extra.cardtype == 'suit' and context.other_card:is_suit(card.ability.extra.card)) then
+            if (card.ability.extra.stored > 0 and context.joker_main) or checkbuffviability(card, context.other_card) then
 
                 if not (card.ability.extra.stored > 0 and context.joker_main) then
                     card.ability.extra.triggered = card.ability.extra.triggered + 1
@@ -3392,12 +3561,12 @@ SMODS.Consumable {
                         end
 
                         if card.ability.extra.stat == 'chips' then
-
                             if context.discard then
                                 card.ability.extra.stored = card.ability.extra.stored + 1
                                 return {
                                     message = 'Stored +'..card.ability.extra.amount,
                                     colour = G.C.CHIPS,
+                                    sound = 'aether_bufftick'..card.ability.extra.stat,
                                     message_card = card,
                                     delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
                                 }
@@ -3407,18 +3576,18 @@ SMODS.Consumable {
                                     chip_mod = card.ability.extra.amount * stored,
                                     message = localize { type = 'variable', key = 'a_chips', vars = { card.ability.extra.amount * stored } },
                                     colour = G.C.CHIPS,
+                                    sound = 'aether_buff'..card.ability.extra.context..card.ability.extra.stat,
                                     message_card = card,
                                     delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
                                 }
                             end
-
                         elseif card.ability.extra.stat == 'mult' then
-
                             if context.discard then
                                 card.ability.extra.stored = card.ability.extra.stored + 1
                                 return {
                                     message = 'Stored +'..card.ability.extra.amount,
                                     colour = G.C.MULT,
+                                    sound = 'aether_bufftick'..card.ability.extra.stat,
                                     message_card = card,
                                     delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
                                 }
@@ -3428,57 +3597,102 @@ SMODS.Consumable {
                                     mult_mod = card.ability.extra.amount * stored,
                                     message = localize { type = 'variable', key = 'a_mult', vars = { card.ability.extra.amount * stored } },
                                     colour = G.C.MULT,
+                                    sound = 'aether_buff'..card.ability.extra.context..card.ability.extra.stat,
                                     message_card = card,
                                     delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
                                 }
                             end
-
                         elseif card.ability.extra.stat == 'xmult' then
-
                             if context.discard then
                                 card.ability.extra.stored = card.ability.extra.stored + 1
                                 return {
                                     message = 'Stored X'..(1 + card.ability.extra.amount),
                                     colour = G.C.MULT,
+                                    sound = 'aether_bufftick'..card.ability.extra.stat,
                                     message_card = card,
                                     delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
                                 }
                             else
                                 card.ability.extra.stored = 0
                                 return {
-                                    Xmult_mod = 1 + card.ability.extra.amount ^ stored,
-                                    message = localize { type = 'variable', key = 'a_xmult', vars = { 1 + card.ability.extra.amount ^ stored } },
+                                    Xmult_mod = (1 + card.ability.extra.amount) ^ stored,
+                                    message = localize { type = 'variable', key = 'a_xmult', vars = { (1 + card.ability.extra.amount) ^ stored } },
                                     colour = G.C.MULT,
+                                    sound = 'aether_buff'..card.ability.extra.context..card.ability.extra.stat,
                                     message_card = card,
                                     delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
                                 }
                             end
-
                         elseif card.ability.extra.stat == 'dollars' then
-
                             return {
                                 dollars = card.ability.extra.amount,
                                 message = '$'..card.ability.extra.amount,
                                 colour = G.C.MONEY,
+                                sound = 'aether_buff'..card.ability.extra.context..card.ability.extra.stat,
                                 message_card = card,
                                 remove_default_message = true,
                                 delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
                             }
-
+                        elseif card.ability.extra.stat == 'repetitions' and context.repetition and not context.repetition_only then
+                            return {
+                                repetitions = card.ability.extra.amount,
+                                message = 'Again!',
+                                colour = G.C.FILTER,
+                                sound = 'aether_buff'..card.ability.extra.context..card.ability.extra.stat,
+                                message_card = card,
+                                delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
+                            }
+                        elseif card.ability.extra.stat == 'level' then
+                            if context.discard then
+                                card.ability.extra.stored = card.ability.extra.stored + 1
+                                return {
+                                    message = 'Stored +'..card.ability.extra.amount,
+                                    colour = G.C.SECONDARY_SET.Planet,
+                                    sound = 'aether_bufftick'..card.ability.extra.stat,
+                                    message_card = card,
+                                    delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
+                                }
+                            else
+                                return {
+                                    message = localize('k_level_up_ex'),
+                                    colour = G.C.SECONDARY_SET.Planet,
+                                    sound = 'aether_buff'..card.ability.extra.context..card.ability.extra.stat,
+                                    message_card = card,
+                                    level_up = true,
+                                    mult = G.GAME.hands[G.GAME.last_hand_played].l_mult,
+                                    chips = G.GAME.hands[G.GAME.last_hand_played].l_chips,
+                                    delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
+                                }
+                            end
                         end
 
                     end
 
                 end
 
-                if card.ability.extra.triggered < card.ability.extra.required then
+                if card.ability.extra.required > 1 and card.ability.extra.triggered < card.ability.extra.required then
 
-                    return {
-                        message = card.ability.extra.triggered..'/'..card.ability.extra.required,
-                        colour = G.C.SECONDARY_SET.Buff,
-                        message_card = card,
-                        delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
-                    }
+                    if card.ability.extra.tally < 8 then
+
+                        return {
+                            message = card.ability.extra.triggered..'/'..card.ability.extra.required,
+                            colour = G.C.SECONDARY_SET.Buff,
+                            sound = 'aether_bufftick'..card.ability.extra.stat,
+                            message_card = card,
+                            delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
+                        }
+
+                    else
+
+                        G.E_MANAGER:add_event(Event({
+                            func = function()
+                                card:juice_up(0.3,0.5)
+                                return true
+                            end,
+                        }))
+
+                    end
+
                 end
 
             end
@@ -3501,6 +3715,8 @@ SMODS.Consumable {
             mult = G.C.MULT,
             xmult = G.C.WHITE,
             dollars = G.C.MONEY,
+            repetitions = G.C.FILTER,
+            level = G.C.SECONDARY_SET.Planet,
         }
 
         G.C.STATSBACKGROUND = {
@@ -3508,6 +3724,8 @@ SMODS.Consumable {
             mult = G.C.WHITE,
             xmult = G.C.MULT,
             dollars = G.C.WHITE,
+            repetitions = G.C.WHITE,
+            level = G.C.WHITE,
         }
 
         G.C.CONTEXT = {
@@ -3517,43 +3735,62 @@ SMODS.Consumable {
             deck = G.C.GREEN,
         }
 
-        if card.ability.extra.cardtype == '' then
+        if card.ability.extra.update then
 
-            local cardtype = pseudorandom('buffcardtype') * #options.cardtype
-            if cardtype % 1 > 0.5 then
-                cardtype = math.ceil(cardtype)
-            else
-                cardtype = math.floor(cardtype)
-                if cardtype < 1 then cardtype = 1 end
+            local cardtype = 0
+
+            if card.ability.extra.cardtype == '' then
+
+                cardtype = pseudorandom('buffcardtype') * #options.cardtype
+                if cardtype % 1 > 0.5 then
+                    cardtype = math.ceil(cardtype)
+                else
+                    cardtype = math.floor(cardtype)
+                    if cardtype < 1 then cardtype = 1 end
+                end
+
+                card.ability.extra.cardtype = options.cardtype[cardtype]
+
             end
 
-            card.ability.extra.cardtype = options.cardtype[cardtype]
+            if card.ability.extra.rarity < 1 then
 
-            local randomrarity = pseudorandom('buffrandom')
+                local randomrarity = pseudorandom('buffrandom')
 
-            if randomrarity > 0.95 then
-                card.ability.extra.rarity = 4
-            elseif randomrarity > 0.85 then
-                card.ability.extra.rarity = 3
-            elseif randomrarity > 0.75 then
-                card.ability.extra.rarity = 2
-            else
-                card.ability.extra.rarity = 1
+                if randomrarity > 0.95 then
+                    card.ability.extra.rarity = 4
+                elseif randomrarity > 0.85 then
+                    card.ability.extra.rarity = 3
+                elseif randomrarity > 0.75 then
+                    card.ability.extra.rarity = 2
+                else
+                    card.ability.extra.rarity = 1
+                end
+
             end
 
             local amountmodifier = 2/3 + (1/3 * card.ability.extra.rarity)
 
             if card.ability.extra.cardtype == 'rank' then
 
-                local rank = pseudorandom('buffcard') * #options.ranks
-                if rank % 1 > 0.5 then
-                    rank = math.ceil(rank)
-                else
-                    rank = math.floor(rank)
-                    if rank < 1 then rank = 1 end
+                if card.ability.extra.card == '' then
+
+                    local rank = pseudorandom('buffcard') * #options.ranks
+                    if rank % 1 > 0.5 then
+                        rank = math.ceil(rank)
+                    else
+                        rank = math.floor(rank)
+                        if rank < 1 then rank = 1 end
+                    end
+
+                    card.ability.extra.card = options.ranks[rank]
+
+                elseif card.ability.extra.card == 'Even' or card.ability.extra.card == 'Odd' or card.ability.extra.card == 'Face' then
+
+                    amountmodifier = amountmodifier / 2
+
                 end
 
-                card.ability.extra.card = options.ranks[rank]
                 card.ability.extra.cardtext = card.ability.extra.card
                 card.ability.extra.cardtextplural = card.ability.extra.card..'s'
 
@@ -3561,39 +3798,69 @@ SMODS.Consumable {
 
                 amountmodifier = amountmodifier / 3
 
-                local suit = pseudorandom('buffcard') * #options.suits
-                if suit % 1 > 0.5 then
-                    suit = math.ceil(suit)
-                else
-                    suit = math.floor(suit)
-                    if suit < 1 then suit = 1 end
+                if card.ability.extra.card == '' then
+
+                    local suit = pseudorandom('buffcard') * #options.suits
+                    if suit % 1 > 0.5 then
+                        suit = math.ceil(suit)
+                    else
+                        suit = math.floor(suit)
+                        if suit < 1 then suit = 1 end
+                    end
+
+                    card.ability.extra.card = options.suits[suit]
+
+                elseif card.ability.extra.card == 'Lights' or card.ability.extra.card == 'Darks' then
+
+                    amountmodifier = amountmodifier / 2
+
                 end
 
-                card.ability.extra.card = options.suits[suit]
                 card.ability.extra.cardtext = localize(card.ability.extra.card, 'suits_singular')
                 card.ability.extra.cardtextplural = card.ability.extra.card
 
             end
 
-            local context = pseudorandom('buffcontext') * #options.contexts
-            if context % 1 > 0.5 then
-                context = math.ceil(context)
-            else
-                context = math.floor(context)
-                if context < 1 then context = 1 end
+            if card.ability.extra.rarity == 4 then
+                table.insert(options.stats, #options.stats, 'repetitions')
+                table.insert(options.stats, #options.stats, 'level')
             end
 
-            card.ability.extra.context = options.contexts[context]
+            if card.ability.extra.stat == '' then
 
-            local stat = pseudorandom('buffstat') * #options.stats
-            if stat % 1 > 0.5 then
-                stat = math.ceil(stat)
-            else
-                stat = math.floor(stat)
-                if stat < 1 then stat = 1 end
+                local stat = pseudorandom('buffstat') * #options.stats
+                if stat % 1 > 0.5 then
+                    stat = math.ceil(stat)
+                else
+                    stat = math.floor(stat)
+                    if stat < 1 then stat = 1 end
+                end
+
+                card.ability.extra.stat = options.stats[stat]
+
             end
 
-            card.ability.extra.stat = options.stats[stat]
+            if card.ability.extra.stat == 'repetitions' then
+                for i = 1, #options.contexts do
+                    if options.contexts[i] == 'discard' then
+                        table.remove(option.contexts, i)
+                    end
+                end
+            end
+
+            if card.ability.extra.context == '' then
+
+                local context = pseudorandom('buffcontext') * #options.contexts
+                if context % 1 > 0.5 then
+                    context = math.ceil(context)
+                else
+                    context = math.floor(context)
+                    if context < 1 then context = 1 end
+                end
+
+                card.ability.extra.context = options.contexts[context]
+
+            end
 
             if card.ability.extra.context == 'score' then
             elseif card.ability.extra.context == 'discard' then
@@ -3611,27 +3878,50 @@ SMODS.Consumable {
                 mult = 8,
                 xmult = 0.5,
                 dollars = 4,
+                repetitions = 1,
+                level = 0.25,
             }
 
             if card.ability.extra.stat == 'xmult' then
                 card.ability.extra.amount = math.ceil((statvalues[card.ability.extra.stat] * amountmodifier) * 20) / 20
-                card.ability.extra.required = math.ceil((1 + statvalues[card.ability.extra.stat] * amountmodifier) / math.max(card.ability.extra.rarity * 2/3, 1))
+                card.ability.extra.required = math.ceil((1 + statvalues[card.ability.extra.stat]) * amountmodifier)
             elseif (statvalues[card.ability.extra.stat] * amountmodifier) < 1 then
                 card.ability.extra.amount = 1
-                card.ability.extra.required = math.ceil((1 / statvalues[card.ability.extra.stat] * amountmodifier) / math.max(card.ability.extra.rarity * 2/3, 1))
+                card.ability.extra.required = math.ceil(1 / (statvalues[card.ability.extra.stat] * amountmodifier))
             else
                 card.ability.extra.amount = math.ceil(statvalues[card.ability.extra.stat] * amountmodifier)
                 card.ability.extra.required = 1
             end
 
+            local outlinecolor = {
+                chips = 'chips',
+                mult = 'mult',
+                xmult = 'mult',
+                dollars = 'money',
+                repetitions = 'tarot',
+                level = 'planet',
+            }
+
             G.E_MANAGER:add_event(Event({
                 trigger = 'after',
                 delay = 0.5,
                 func = function()
-                    card:sparkle({ time = 1, colors = {G.C.RARITY[card.ability.extra.rarity]} }, true, false, 'aether_joker'..card.ability.extra.rarity)
+                    card:sparkle({
+                        time = 1,
+                        colors = {G.C.RARITY[card.ability.extra.rarity]}
+                    }, true, false, 'aether_joker'..card.ability.extra.rarity)
+                    card:outline({
+                        color = outlinecolor[card.ability.extra.stat],
+                        size = 0.15,
+                        rotation = math.random(-15, 15),
+                        time = 0.5,
+                        gamespeed = false,
+                    }, true, '')
                     return true
                 end,
             }))
+
+            card.ability.extra.update = false
 
         end
 
@@ -3647,12 +3937,16 @@ SMODS.Consumable {
                 mult = '+'..card.ability.extra.amount,
                 xmult = 'X'..(1 + card.ability.extra.amount),
                 dollars = '$'..card.ability.extra.amount,
+                repetitions = card.ability.extra.amount,
+                level = '+'..card.ability.extra.amount,
             },
             stattext = {
                 chips = ' Chips',
                 mult = ' Mult',
                 xmult = ' Mult',
                 dollars = '',
+                repetitions = ' additional trigger',
+                level = ' Hand Levels',
             },
             contexts = {
                 score = ' scored',
@@ -3674,7 +3968,7 @@ SMODS.Consumable {
         card.ability.extra.contexttext = textreplace.contexts[card.ability.extra.context]
         card.ability.extra.countertext = textreplace.countertext[card.ability.extra.context]
 
-        if card.ability.extra.stat == 'xmult' or card.ability.extra.amount < 1 then
+        if card.ability.extra.required > 1 then
             card.ability.extra.text1 = ''
             card.ability.extra.cardtext1 = ''
             card.ability.extra.text2 = ''
@@ -3711,14 +4005,8 @@ SMODS.Consumable {
 
         if checkarea then
             for k,v in pairs(checkarea.cards) do
-                if card.ability.extra.cardtype == 'rank' then
-                    if v.config.card.value == card.ability.extra.card and not v.debuff and not v.highlighted then
-                        card.ability.extra.tally = card.ability.extra.tally + 1
-                    end
-                else
-                    if v:is_suit(card.ability.extra.card) and not v.debuff and not v.highlighted then
-                        card.ability.extra.tally = card.ability.extra.tally + 1
-                    end
+                if checkbuffviability(card, v) and not v.debuff and not v.highlighted then
+                    card.ability.extra.tally = card.ability.extra.tally + 1
                 end
             end
         end
@@ -3789,6 +4077,93 @@ SMODS.Consumable {
     set_card_type_badge = function(self, card, badges)
         badges[#badges+1] = create_badge(card.ability.extra.raritytext, G.C.RARITY[card.ability.extra.rarity], nil, 1.2)        
     end,
+}
+
+SMODS.Consumable {
+    key = 'bufflooting',
+    set = 'Tarot',
+    atlas = 'aetherconsumeables',
+    pos = { x = 0, y = 0 },
+    loc_txt = {
+        name = 'Looting',
+        text = {
+            'Creates a random',
+            '{C:red}Rare {C:buff}Buff Card',
+            '{C:inactive}(Must have room)',
+        }
+    },
+    use = function(self, card, area, copier)
+        G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.4, func = function()
+            local card = SMODS.create_card({
+                key = 'c_aether_buffcard',
+                area = G.aether_buffs,
+                no_edition = true,
+            })
+            card.ability.extra.rarity = 3
+            card:add_to_deck()
+            G.aether_buffs:emplace(card)
+            return true end }))
+        delay(0.6)
+    end,
+    can_use = function(self, card)
+        return #G.aether_buffs.cards < G.aether_buffs.config.card_limit
+    end,
+    cost = 3,
+    unlocked = true,
+    discovered = true,
+}
+
+SMODS.Consumable {
+    key = 'buffbroaden',
+    set = 'Spectral',
+    atlas = 'aetherconsumeables',
+    pos = { x = 1, y = 0 },
+    loc_txt = {
+        name = 'Broaden',
+        text = {
+            'Converts a {C:buff}Buff Card {C:attention}Target',
+            'into a broader type',
+        }
+    },
+    use = function(self, card, area, copier)
+
+        local cardbroadens = {
+            ['Spades'] = 'Darks',
+            ['Hearts'] = 'Lights',
+            ['Clubs'] = 'Darks',
+            ['Diamonds'] = 'Lights',
+            ['2'] = 'Even',
+            ['3'] = 'Odd',
+            ['4'] = 'Even',
+            ['5'] = 'Odd',
+            ['6'] = 'Even',
+            ['7'] = 'Odd',
+            ['8'] = 'Even',
+            ['9'] = 'Odd',
+            ['10'] = 'Even',
+            ['Jack'] = 'Face',
+            ['Queen'] = 'Face',
+            ['King'] = 'Face',
+            ['Ace'] = 'Odd',
+        }
+
+        G.E_MANAGER:add_event(Event({func = function()
+            G.aether_buffs.highlighted[1]:flip()
+        return true end }))
+        delay(0.2)
+        G.E_MANAGER:add_event(Event({ func = function() 
+            G.aether_buffs.highlighted[1]:flip()
+            G.aether_buffs.highlighted[1].ability.extra.card = cardbroadens[G.aether_buffs.highlighted[1].ability.extra.card]
+            G.aether_buffs.highlighted[1].ability.extra.update = true
+        return true end }))
+
+    end,
+    can_use = function(self, card)
+        return #G.aether_buffs.highlighted == 1 and G.aether_buffs.highlighted[1].ability.extra.card ~= 'Darks' and G.aether_buffs.highlighted[1].ability.extra.card ~= 'Lights' and G.aether_buffs.highlighted[1].ability.extra.card ~= 'Even' and G.aether_buffs.highlighted[1].ability.extra.card ~= 'Odd' and G.aether_buffs.highlighted[1].ability.extra.card ~= 'Face'
+    end,
+    cost = 6,
+    unlocked = true,
+    discovered = true,
 }
 
 SMODS.Booster {

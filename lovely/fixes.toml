@@ -87,7 +87,13 @@ match_indent = true
 target = "card.lua"
 pattern = 'if G.STATE ~= G.STATES.HAND_PLAYED and G.STATE ~= G.STATES.DRAW_TO_HAND and G.STATE ~= G.STATES.PLAY_TAROT or any_state then'
 position = "before"
-payload = "if self.ability.effect == 'Enhance' and self.config.block_enhance then return false end"
+payload = """
+if self.ability.effect == 'Enhance' then
+        for k,v in pairs(G.hand.highlighted) do
+                if v.ability.block_enhance then return false end
+        end
+end
+"""
 match_indent = true
 
 [[patches]]

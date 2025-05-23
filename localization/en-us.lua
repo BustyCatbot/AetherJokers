@@ -35,5 +35,20 @@ return {
                 }
             },
         },
+        Aether={
+            buffdiscard={
+                name='Discard',
+                text={
+                    '{C:attention}Stores{} and applies stat',
+                    'at {C:attention}end{} of {C:buff}Buff Card{} processing',
+                }
+            }
+        }
+    },
+    misc={
+        suits_singular={
+            Lights='Light',
+            Darks='Dark'
+        }
     }
 }
