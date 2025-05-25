@@ -2709,7 +2709,7 @@ SMODS.Joker {
 	loc_txt = {
 		name = 'Level Up!',
 		text = {
-			'{C:attention}+4{} {C:buff}Buff Card{} slots',
+			'{C:attention}+4{} {C:buff}Buff{} card slots',
 		}
 	},
 	config = { extra = { added_hand_size = 0 } },
@@ -3493,6 +3493,7 @@ SMODS.Consumable {
     config = { extra = {
 
         update = true,
+        move = false,
 
         rarity = 0,
         raritytext = '',
@@ -3701,6 +3702,11 @@ SMODS.Consumable {
 
     end,
     update = function(self, card, dt)
+
+        if card.area ~= G.aether_buffs and card.ability.extra.move and #G.aether_buffs < G.aether_buffs.config.card_limit then
+            card.ability.extra.move = false
+            G.aether_buffs:emplace(card)
+        end
 
         local options = {
             cardtype = { 'rank', 'suit' },
@@ -4032,6 +4038,8 @@ SMODS.Consumable {
         elseif area == G.consumeables and #G.aether_buffs < G.aether_buffs.config.card_limit then
             area:remove_card(card)
             G.aether_buffs:emplace(card)
+        else
+            card.ability.extra.move = true
         end
     end,
     in_pool = function(self, args)
@@ -4088,12 +4096,12 @@ SMODS.Consumable {
         name = 'Looting',
         text = {
             'Creates a random',
-            '{C:red}Rare {C:buff}Buff Card',
+            '{C:red}Rare {C:buff}Buff{} card',
             '{C:inactive}(Must have room)',
         }
     },
     use = function(self, card, area, copier)
-        G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.4, func = function()
+        G.E_MANAGER:add_event(Event({func = function()
             local card = SMODS.create_card({
                 key = 'c_aether_buffcard',
                 area = G.aether_buffs,
@@ -4102,8 +4110,7 @@ SMODS.Consumable {
             card.ability.extra.rarity = 3
             card:add_to_deck()
             G.aether_buffs:emplace(card)
-            return true end }))
-        delay(0.6)
+        return true end }))
     end,
     can_use = function(self, card)
         return #G.aether_buffs.cards < G.aether_buffs.config.card_limit
@@ -4121,8 +4128,8 @@ SMODS.Consumable {
     loc_txt = {
         name = 'Broaden',
         text = {
-            'Converts a {C:buff}Buff Card {C:attention}Target',
-            'into a broader type',
+            'Converts a {C:buff}Buff{} card {C:attention}Target',
+            'into a {C:attention}Broad{} card',
         }
     },
     use = function(self, card, area, copier)
@@ -4173,7 +4180,7 @@ SMODS.Booster {
         group_name = 'Buff Cards',
         text = {
             'Add {C:attention}1{} of up to',
-            '{C:attention}3{} {C:buff}Buff Cards{} to',
+            '{C:attention}3{} {C:buff}Buff{} cards to',
             'your build'
         }
     },
@@ -4209,7 +4216,7 @@ SMODS.Booster {
         group_name = 'Buff Cards',
         text = {
             'Add {C:attention}2{} of up to',
-            '{C:attention}4{} {C:buff}Buff Cards{} to',
+            '{C:attention}4{} {C:buff}Buff{} cards to',
             'your build'
         }
     },
@@ -4245,7 +4252,7 @@ SMODS.Booster {
         group_name = 'Buff Cards',
         text = {
             'Add {C:attention}3{} of up to',
-            '{C:attention}5{} {C:buff}Buff Cards{} to',
+            '{C:attention}5{} {C:buff}Buff{} cards to',
             'your build'
         }
     },
@@ -4279,7 +4286,7 @@ SMODS.Voucher {
     loc_txt = {
         name = 'Extra Drops',
         text = {
-            '{C:buff}Buff Cards{} can',
+            '{C:buff}Buff{} cards can',
             'be purchased from',
             'the {C:attention}shop{}'
         }
@@ -4304,7 +4311,7 @@ SMODS.Voucher {
     loc_txt = {
         name = 'Multi-Class',
         text = {
-            '{C:attention}+4{} {C:buff}Buff Cards{} slots',
+            '{C:attention}+4{} {C:buff}Buff{} card slots',
         }
     },
     atlas = 'aethervouchers',
@@ -4320,6 +4327,57 @@ SMODS.Voucher {
     end,
     in_pool = function(self, args)
         return config.buffcards
+    end
+}
+
+SMODS.Voucher {
+    key = 'levelvoucher1',
+    loc_txt = {
+        name = 'Sequential Eclipse',
+        text = {
+            '{C:planet}Planet{} cards upgrade the',
+            '{C:attention}next highest{} poker hand(s)',
+            '{C:planet}Planet{} cards and {C:planet}Celestial{}',
+            '{C:planet}Packs{} cost {C:attention}1.5x{}'
+        }
+    },
+    atlas = 'aethervouchers',
+    pos = { x = 2, y = 0 },
+    config = {},
+    no_collection = not config.levelvouchers,
+    unlocked = true,
+    discovered = true,
+    cost = 10,
+    redeem = function(self, card)
+    end,
+    in_pool = function(self, args)
+        return config.levelvouchers
+    end
+}
+
+SMODS.Voucher {
+    key = 'levelvoucher2',
+    loc_txt = {
+        name = 'Planets Align',
+        text = {
+            '{C:planet}Planet{} cards upgrade {C:attention}all{}',
+            '{C:attention}contained{} poker hands',
+            '{C:planet}Planet{} cards and {C:planet}Celestial{}',
+            '{C:planet}Packs{} cost {C:attention}2x{}'
+        }
+    },
+    atlas = 'aethervouchers',
+    pos = { x = 3, y = 0 },
+    config = {},
+    no_collection = not config.levelvouchers,
+    unlocked = true,
+    discovered = true,
+    cost = 10,
+    requires = {'v_aether_levelvoucher1'},
+    redeem = function(self, card)
+    end,
+    in_pool = function(self, args)
+        return config.levelvouchers
     end
 }
 
@@ -4558,6 +4616,23 @@ SMODS.current_mod.config_tab = function()
                                         label = 'Buff Cards',
                                         ref_table = config,
                                         ref_value = 'buffcards'
+                                    })
+                                }
+                            },
+                        }
+                    },
+                    {
+                        n = G.UIT.C,
+                        config = { align = "cm" },
+                        nodes = {
+                            {
+                                n = G.UIT.R,
+                                config = { align = "cm", padding = 0.01 },
+                                nodes = {
+                                    create_toggle({
+                                        label = 'Level Vouchers',
+                                        ref_table = config,
+                                        ref_value = 'levelvouchers'
                                     })
                                 }
                             },

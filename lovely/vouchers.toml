@@ -1,0 +1,68 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 1
+
+# Level up vouchers level up
+[[patches]]
+[patches.pattern]
+target = 'card.lua'
+match_indent = true
+position = 'after'
+pattern = 'level_up_hand(used_tarot, self.ability.consumeable.hand_type)'
+payload = '''
+
+    local levelhands1 = {
+        ['High Card'] = {'Pair'},
+        ['Pair'] = {'Two Pair', 'Three of a Kind'},
+        ['Two Pair'] = {'Full House'},
+        ['Full House'] = {'Flush House'},
+        ['Three of a Kind'] = {'Four of a Kind', 'Full House'},
+        ['Four of a Kind'] = {'Five of a Kind'},
+        ['Five of a Kind'] = {'Flush Five'},
+        ['Straight'] = {'Straight Flush'},
+    }
+
+    local levelhands2 = {
+        ['Pair'] = {'High Card'},
+        ['Two Pair'] = {'Pair', 'High Card'},
+        ['Full House'] = {'Three of a Kind', 'Two Pair', 'Pair', 'High Card'},
+        ['Flush House'] = {'Flush', 'Full House', 'Three of a Kind', 'Two Pair', 'Pair', 'High Card'},
+        ['Three of a Kind'] = {'Pair', 'High Card'},
+        ['Four of a Kind'] = {'Three of a Kind', 'Pair', 'High Card'},
+        ['Five of a Kind'] = {'Four of a Kind', 'Three of a Kind', 'Pair', 'High Card'},
+        ['Flush Five'] = {'Flush', 'Five of a Kind', 'Four of a Kind', 'Three of a Kind', 'Pair', 'High Card'},
+        ['Straight'] = {'High Card'},
+        ['Straight Flush'] = {'Flush', 'Straight', 'High Card'},
+        ['Flush'] = {'High Card'},
+    }
+
+    if G.GAME.used_vouchers.v_aether_levelvoucher1 and levelhands1[self.ability.consumeable.hand_type] then
+        for k,v in pairs(levelhands1[self.ability.consumeable.hand_type]) do
+            if G.GAME.hands[v].visible then
+                update_hand_text({sound = 'button', volume = 0.7, pitch = 0.8, delay = 0.3}, {handname=localize(v, 'poker_hands'),chips = G.GAME.hands[v].chips, mult = G.GAME.hands[v].mult, level=G.GAME.hands[v].level})
+                level_up_hand(used_tarot, v)
+            end
+        end
+    end
+    if G.GAME.used_vouchers.v_aether_levelvoucher2 and levelhands2[self.ability.consumeable.hand_type] then
+        for k,v in pairs(levelhands2[self.ability.consumeable.hand_type]) do
+            if G.GAME.hands[v].visible then
+                update_hand_text({sound = 'button', volume = 0.7, pitch = 0.8, delay = 0.3}, {handname=localize(v, 'poker_hands'),chips = G.GAME.hands[v].chips, mult = G.GAME.hands[v].mult, level=G.GAME.hands[v].level})
+                level_up_hand(used_tarot, v)
+            end
+        end
+    end
+'''
+
+# Level up vouchers planet cost
+[[patches]]
+[patches.pattern]
+target = 'card.lua'
+match_indent = true
+position = 'after'
+pattern = "if (self.ability.set == 'Planet' or (self.ability.set == 'Booster' and self.ability.name:find('Celestial'))) and #find_joker('Astronomer') > 0 then self.cost = 0 end"
+payload = """
+if (self.ability.set == 'Planet' or (self.ability.set == 'Booster' and self.ability.name:find('Celestial'))) and G.GAME.used_vouchers.v_aether_levelvoucher1 then self.cost = self.cost * 1.5 end
+if (self.ability.set == 'Planet' or (self.ability.set == 'Booster' and self.ability.name:find('Celestial'))) and G.GAME.used_vouchers.v_aether_levelvoucher2 then self.cost = self.cost / 0.75 end
+"""
