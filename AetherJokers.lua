@@ -64,6 +64,16 @@ if config.enhancements then
     }
 end
 
+if config.tarots then
+    SMODS.Atlas {
+        key = 'Tarot',
+        path = 'BaseTarots.png',
+        px = 71,
+        py = 95,
+        raw_key = true
+    }
+end
+
 SMODS.Atlas {
 	key = 'aetherjokers',
 	path = 'AetherJokers.png',
@@ -2226,25 +2236,45 @@ SMODS.Joker {
 
         if context.selling_self and #G.hand.highlighted > 0 then
 
+            local copiedcards = {}
+
             for k,v in pairs(G.hand.highlighted) do
 
                 G.E_MANAGER:add_event(Event({
                     func = function()
                         copiedcard = copy_card(v)
-                        copiedcard:add_to_deck()
                         table.insert(G.playing_cards, copiedcard)
-                        G.deck.config.card_limit = G.deck.config.card_limit + 1
-                        G.deck:emplace(copiedcard)
-                        copiedcard:set_ability(G.P_CENTERS.m_aether_counterfeit, nil, true)
+                        table.insert(copiedcards, copiedcard)
+                        copiedcard:add_to_deck()
+                        G.play:emplace(copiedcard)
+                        copiedcard:set_ability(G.P_CENTERS.m_aether_counterfeit, nil, false)
                         card:juice_up(0.3,0.5)
-                        play_sound('card1')
+                        play_sound('cardFan2')
                         return true
                     end,
                 }))
 
-                delay(0.2)
+                delay(0.25)
 
             end
+
+            G.E_MANAGER:add_event(Event({
+                func = function()
+                    for k,v in pairs(copiedcards) do
+                        G.E_MANAGER:add_event(Event({
+                            func = function()
+                                G.deck.config.card_limit = G.deck.config.card_limit + 1
+                                G.play:remove_card(v)
+                                G.deck:emplace(v)
+                                play_sound('card1')
+                                return true
+                            end,
+                        }))
+                        delay(0.1)
+                    end
+                    return true
+                end,
+            }))
 
         end
 
@@ -2264,7 +2294,7 @@ SMODS.Joker {
             '{C:blue}hand{} on {C:attention}first draw{}',
             '{C:red}-1{} {C:held}hand size{} on',
             'each {C:blue}hand played{}',
-            '{C:inactive}(Currently {C:attention}#1#{C:inactive})'
+            '{C:inactive}(Currently {C:held}+#1#{C:inactive} hand size)'
 		}
 	},
 	config = { extra = { added_hand_size = 0 } },
@@ -3439,9 +3469,6 @@ SMODS.ConsumableType {
     }
 }
 
-G.C.SUITS.Lights = HEX('f97853')
-G.C.SUITS.Darks = HEX('5f88a9')
-
 local function checkbuffviability(card, target)
 
     return (card.ability.extra.card == 'Even' and target:get_id() and target:get_id() < 11 and target:get_id()%2 == 0)
@@ -3493,7 +3520,6 @@ SMODS.Consumable {
     config = { extra = {
 
         update = true,
-        move = false,
 
         rarity = 0,
         raritytext = '',
@@ -3654,8 +3680,10 @@ SMODS.Consumable {
                                     delay = card.ability.extra.triggerdelay - G.real_dt * G.SPEEDFACTOR,
                                 }
                             else
+                                card.ability.extra.stored = 0
                                 return {
                                     message = localize('k_level_up_ex'),
+                                    remove_default_message = true,
                                     colour = G.C.SECONDARY_SET.Planet,
                                     sound = 'aether_buff'..card.ability.extra.context..card.ability.extra.stat,
                                     message_card = card,
@@ -3703,11 +3731,6 @@ SMODS.Consumable {
     end,
     update = function(self, card, dt)
 
-        if card.area ~= G.aether_buffs and card.ability.extra.move and #G.aether_buffs < G.aether_buffs.config.card_limit then
-            card.ability.extra.move = false
-            G.aether_buffs:emplace(card)
-        end
-
         local options = {
             cardtype = { 'rank', 'suit' },
             ranks = { '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace' },
@@ -3715,6 +3738,9 @@ SMODS.Consumable {
             stats = { 'chips', 'mult', 'xmult', 'dollars' },
             contexts = { 'score', 'discard', 'held', 'deck' },
         }
+
+        G.C.SUITS.Lights = HEX('F97853')
+        G.C.SUITS.Darks = HEX('5F88A9')
 
         G.C.STATS = {
             chips = G.C.CHIPS,
@@ -3849,7 +3875,7 @@ SMODS.Consumable {
             if card.ability.extra.stat == 'repetitions' then
                 for i = 1, #options.contexts do
                     if options.contexts[i] == 'discard' then
-                        table.remove(option.contexts, i)
+                        table.remove(options.contexts, i)
                     end
                 end
             end
@@ -4038,15 +4064,13 @@ SMODS.Consumable {
         elseif area == G.consumeables and #G.aether_buffs < G.aether_buffs.config.card_limit then
             area:remove_card(card)
             G.aether_buffs:emplace(card)
-        else
-            card.ability.extra.move = true
         end
     end,
     in_pool = function(self, args)
         return config.buffcards, { allow_duplicates = true }
     end,
     can_use = function(self, card)
-        if (card.area ~= G.aether_buffs and #G.aether_buffs.cards < G.aether_buffs.config.card_limit) or card.area == G.aether_buffs then
+        if card.area == G.aether_buffs or card.area == G.consumeables then
             return true
         end
     end,
@@ -4593,6 +4617,11 @@ SMODS.current_mod.config_tab = function()
                                         label = 'Enhancements Skin',
                                         ref_table = config,
                                         ref_value = 'enhancements'
+                                    }),
+                                    create_toggle({
+                                        label = 'Tarots Skin',
+                                        ref_table = config,
+                                        ref_value = 'tarots'
                                     })
                                 }
                             },
